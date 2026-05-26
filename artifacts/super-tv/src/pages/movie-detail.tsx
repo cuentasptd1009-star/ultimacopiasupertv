@@ -51,6 +51,23 @@ export default function MovieDetail() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const { openKeyboard } = useTvKeyboard();
 
+  // Ref holding latest keyboard-handler state so the listener registers only once
+  const kbRef = useRef<{
+    mvZone: MvZone;
+    btnIndex: number; catPillIdx: number; gridRow: number; gridCol: number;
+    related: Array<{ id: number; title: string; category?: string | null; [key: string]: unknown }>;
+    actionButtons: Array<{ key: string; label: string; action: () => void }>;
+    categories: string[]; allPills: (string | null)[];
+    filterCat: string | null; search: string;
+    openKeyboard: typeof openKeyboard;
+    handleBack: () => void;
+    setLocation: (path: string) => void;
+  }>({
+    mvZone: 'buttons', btnIndex: 0, catPillIdx: 0, gridRow: 0, gridCol: 0,
+    related: [], actionButtons: [], categories: [], allPills: [],
+    filterCat: null, search: '', openKeyboard, handleBack: () => {}, setLocation,
+  });
+
   const [ytResults, setYtResults] = useState<YtResult[]>([]);
   const [archiveResults, setArchiveResults] = useState<ArchiveResult[]>([]);
   const [externalSearchLoading, setExternalSearchLoading] = useState(false);
@@ -212,19 +229,23 @@ export default function MovieDetail() {
 
   const allPills = useMemo(() => [null, ...categories], [categories]);
 
+  // Keep ref up to date every render (synchronous, no stale closures in keyboard handler)
+  kbRef.current = { mvZone, btnIndex, catPillIdx, gridRow, gridCol, related, actionButtons, categories, allPills, filterCat, search, openKeyboard, handleBack, setLocation };
+
   useEffect(() => {
     if (mvZone === 'buttons') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     } else if (mvZone === 'catpills' || mvZone === 'search') {
       const el = document.querySelector('[data-mv-zone="catpills"]') as HTMLElement | null;
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el) el.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'nearest' });
     } else if (mvZone === 'grid' && focusedGridRef.current) {
-      focusedGridRef.current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      focusedGridRef.current.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'nearest', inline: 'nearest' });
     }
   }, [mvZone, gridRow, gridCol]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const { mvZone, btnIndex, catPillIdx, gridRow, gridCol, related, actionButtons, categories, allPills, filterCat, search, openKeyboard, handleBack, setLocation } = kbRef.current;
       const activeEl = document.activeElement;
       const isInputFocused = activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement || (activeEl instanceof HTMLElement && activeEl.isContentEditable);
       if (isInputFocused) {
@@ -378,7 +399,8 @@ export default function MovieDetail() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mvZone, btnIndex, catPillIdx, gridRow, gridCol, related, actionButtons, isFav, categories, allPills, filterCat, search, openKeyboard]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isLoading) {
     return (
@@ -435,7 +457,7 @@ export default function MovieDetail() {
           <img
             src={bgImage}
             alt={movie.title}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-150 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setBgLoaded(true)}
             onError={() => setBgLoaded(true)}
           />

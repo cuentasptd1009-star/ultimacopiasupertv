@@ -355,25 +355,45 @@ export default function VodPlayerPage() {
 
   const toggleFullscreen = useCallback(() => {
     const el = containerRef.current as any;
+    const vid = videoRef.current as any;
     if (!el) return;
-    if (!document.fullscreenElement) {
+    const isFull = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+    if (!isFull) {
+      // Standard fullscreen on container
       const req = el.requestFullscreen || el.webkitRequestFullscreen;
-      if (req) { try { req.call(el); } catch {} }
-      else setIsFullscreen(f => !f); // CSS-only fallback for iOS
+      if (req) { try { req.call(el); return; } catch {} }
+      // iOS Safari: fullscreen on the video element itself
+      if (vid?.webkitEnterFullscreen) { try { vid.webkitEnterFullscreen(); return; } catch {} }
+      // CSS-only fallback
+      setIsFullscreen(true);
     } else {
       const exit = (document as any).exitFullscreen || (document as any).webkitExitFullscreen;
-      if (exit) { try { exit.call(document); } catch {} }
-      else setIsFullscreen(false);
+      if (exit) { try { exit.call(document); return; } catch {} }
+      if (vid?.webkitExitFullscreen) { try { vid.webkitExitFullscreen(); return; } catch {} }
+      setIsFullscreen(false);
     }
   }, []);
 
   useEffect(() => {
-    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const onFsChange = () => {
+      setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
+    };
+    const onIosEnter = () => setIsFullscreen(true);
+    const onIosExit = () => setIsFullscreen(false);
+    const vid = videoRef.current as any;
     document.addEventListener('fullscreenchange', onFsChange);
     document.addEventListener('webkitfullscreenchange', onFsChange);
+    if (vid) {
+      vid.addEventListener('webkitbeginfullscreen', onIosEnter);
+      vid.addEventListener('webkitendfullscreen', onIosExit);
+    }
     return () => {
       document.removeEventListener('fullscreenchange', onFsChange);
       document.removeEventListener('webkitfullscreenchange', onFsChange);
+      if (vid) {
+        vid.removeEventListener('webkitbeginfullscreen', onIosEnter);
+        vid.removeEventListener('webkitendfullscreen', onIosExit);
+      }
     };
   }, []);
 
