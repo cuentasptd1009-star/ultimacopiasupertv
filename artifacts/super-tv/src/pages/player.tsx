@@ -788,7 +788,19 @@ export default function PlayerPage() {
       className="relative w-full h-[100dvh] bg-black overflow-hidden flex items-center justify-center select-none"
       onMouseMove={showControlsTemporarily}
       onTouchStart={showControlsTemporarily}
-      onClick={e => { if (e.target === containerRef.current || e.target === videoRef.current) togglePlay(); showControlsTemporarily(); }}
+      onClick={e => {
+        if (e.target === containerRef.current || e.target === videoRef.current) {
+          const vid = videoRef.current as any;
+          // iOS Safari requires webkitEnterFullscreen to be called from a user gesture.
+          // If the video isn't already fullscreen and the iOS API is available, go fullscreen
+          // on this tap instead of toggling play — subsequent taps toggle play normally.
+          if (!isFullscreen && vid?.webkitEnterFullscreen) {
+            try { vid.webkitEnterFullscreen(); showControlsTemporarily(); return; } catch {}
+          }
+          togglePlay();
+        }
+        showControlsTemporarily();
+      }}
     >
       <video
         ref={videoRef}
