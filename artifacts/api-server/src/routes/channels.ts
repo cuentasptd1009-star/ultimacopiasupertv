@@ -117,12 +117,52 @@ function parseM3U(content: string) {
   return channels;
 }
 
+const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|ico|svg)(\?[^\s|]*)?$/i;
+const IMAGE_KEYWORD_RE = /\/(logo|icon|thumb|poster|banner|image|img)s?\//i;
+
+function isStreamUrl(url: string): boolean {
+  const protocols = ["http://", "https://", "rtmp://", "rtmps://", "rtsp://"];
+  if (!protocols.some((p) => url.startsWith(p))) return false;
+  if (url.endsWith(".html") || url.endsWith(".php")) return false;
+  const path = url.split("?")[0];
+  if (IMAGE_EXT_RE.test(path) && IMAGE_KEYWORD_RE.test(path)) return false;
+  return true;
+}
+
+function isImageUrl(url: string): boolean {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return false;
+  const path = url.split("?")[0];
+  return IMAGE_EXT_RE.test(path) || IMAGE_KEYWORD_RE.test(path);
+}
+
 function detectLinks(content: string) {
-  const urlRegex = /(?:https?|rtmp|rtmps|rtsp):\/\/[^\s\r\n"'<>]+/g;
-  const matches = content.match(urlRegex) ?? [];
-  return matches
-    .filter((url) => !url.endsWith(".html") && !url.endsWith(".php"))
-    .map((streamUrl, i) => ({ name: `Canal ${i + 1}`, streamUrl }));
+  const lines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const channels: { name: string; streamUrl: string; logo?: string }[] = [];
+
+  for (const line of lines) {
+    const parts = line.split("|").map((p) => p.trim()).filter(Boolean);
+
+    if (parts.length >= 2) {
+      const streamPart = parts.find((p) => isStreamUrl(p));
+      const logoPart = parts.find((p) => isImageUrl(p));
+      const namePart = parts.find((p) => !isStreamUrl(p) && !isImageUrl(p) && p.length > 0);
+      if (streamPart) {
+        channels.push({ name: namePart || `Canal ${channels.length + 1}`, streamUrl: streamPart, logo: logoPart });
+        continue;
+      }
+    }
+
+    const urlRe = /(?:https?|rtmp|rtmps|rtsp):\/\/[^\s\r\n"'<>|]+/g;
+    const urls = line.match(urlRe) ?? [];
+    const streams = urls.filter((u) => isStreamUrl(u));
+    const images = urls.filter((u) => isImageUrl(u));
+
+    for (const streamUrl of streams) {
+      channels.push({ name: `Canal ${channels.length + 1}`, streamUrl, logo: images[0] });
+    }
+  }
+
+  return channels;
 }
 
 router.get("/channels", async (req: Request, res: Response) => {

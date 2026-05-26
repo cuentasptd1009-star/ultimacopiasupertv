@@ -1065,6 +1065,62 @@ function downloadCsvTemplate() {
 
 type ImportTab = 'm3u' | 'csv' | 'urls';
 
+const STREAM_PROTOCOLS = ['http://', 'https://', 'rtmp://', 'rtmps://', 'rtsp://'];
+const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|ico|svg)(\?[^|\s]*)?$/i;
+const IMAGE_KEYWORD_RE = /\/(logo|icon|thumb|poster|banner|image|img)s?\//i;
+
+function isStreamUrl(url: string): boolean {
+  if (!STREAM_PROTOCOLS.some(p => url.startsWith(p))) return false;
+  if (url.endsWith('.html') || url.endsWith('.php')) return false;
+  if (IMAGE_EXT_RE.test(url.split('?')[0]) && IMAGE_KEYWORD_RE.test(url)) return false;
+  return true;
+}
+
+function isImageUrl(url: string): boolean {
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+  const path = url.split('?')[0];
+  return IMAGE_EXT_RE.test(path) || IMAGE_KEYWORD_RE.test(path);
+}
+
+function parseTextWithLogos(content: string, prefix: string): string {
+  const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const channels: { streamUrl: string; logo?: string; name?: string }[] = [];
+
+  for (const line of lines) {
+    const parts = line.split('|').map(p => p.trim()).filter(Boolean);
+
+    if (parts.length >= 2) {
+      const streamPart = parts.find(p => isStreamUrl(p));
+      const logoPart = parts.find(p => isImageUrl(p));
+      const namePart = parts.find(p => !isStreamUrl(p) && !isImageUrl(p) && p.length > 0);
+      if (streamPart) {
+        channels.push({ streamUrl: streamPart, logo: logoPart, name: namePart });
+        continue;
+      }
+    }
+
+    const urlRe = /(?:https?|rtmp|rtmps|rtsp):\/\/[^\s\r\n"'<>|]+/g;
+    const urls = line.match(urlRe) ?? [];
+    const streams = urls.filter(u => isStreamUrl(u));
+    const images = urls.filter(u => isImageUrl(u));
+
+    for (const streamUrl of streams) {
+      channels.push({ streamUrl, logo: images[0] });
+    }
+  }
+
+  if (channels.length === 0) return '';
+
+  let m3u = '#EXTM3U\n';
+  channels.forEach(({ streamUrl, logo, name }, i) => {
+    let info = '#EXTINF:-1';
+    if (logo) info += ` tvg-logo="${logo}"`;
+    info += `,${name || `${prefix} ${i + 1}`}`;
+    m3u += info + '\n' + streamUrl + '\n';
+  });
+  return m3u;
+}
+
 const ADMIN_CHANNELS_KEY = ['admin', 'channels'] as const;
 
 function ChannelsManager() {
@@ -1325,10 +1381,9 @@ function ChannelsManager() {
       let format: 'm3u' | 'auto' = importTab === 'm3u' ? 'm3u' : 'auto';
       if (importTab === 'urls') {
         const prefix = urlsPrefix.trim() || 'Canal';
-        const urls = (importContent.match(/(?:https?|rtmp|rtmps|rtsp):\/\/[^\s\r\n"'<>]+/g) as string[] || [])
-          .filter((u: string) => !u.endsWith('.html') && !u.endsWith('.php'));
-        if (urls.length > 0) {
-          content = '#EXTM3U\n' + urls.map((u, i) => `#EXTINF:-1,${prefix} ${i + 1}\n${u}`).join('\n');
+        const parsed = parseTextWithLogos(importContent, prefix);
+        if (parsed) {
+          content = parsed;
           format = 'm3u';
         }
       }
@@ -1357,15 +1412,9 @@ function ChannelsManager() {
           finalContent = content;
         } else {
           const baseName = file.name.replace(/\.[^/.]+$/, '');
-          const urlRegex = /(?:https?|rtmp|rtmps|rtsp):\/\/[^\s\r\n"'<>]+/g;
-          const urls = (content.match(urlRegex) ?? []).filter((url: string) => !url.endsWith('.html') && !url.endsWith('.php'));
-          if (urls.length === 0) { failed++; continue; }
-          let m3u = '#EXTM3U\n';
-          urls.forEach((url: string, i: number) => {
-            const channelName = urls.length === 1 ? baseName : `${baseName} ${i + 1}`;
-            m3u += `#EXTINF:-1,${channelName}\n${url}\n`;
-          });
-          finalContent = m3u;
+          const parsed = parseTextWithLogos(content, baseName);
+          if (!parsed) { failed++; continue; }
+          finalContent = parsed;
         }
         await new Promise<void>(resolve => {
           importMutation.mutate({ data: { content: finalContent, format } }, {
