@@ -451,6 +451,7 @@ export default function Home() {
   });
   const [rowIndex, setRowIndex] = useState(0);
   const [colIndex, setColIndex] = useState(0);
+  const [rowsFocusActive, setRowsFocusActive] = useState(false);
   const [sidebarIdx, setSidebarIdx] = useState(0);
   const [heroBtnIndex, setHeroBtnIndex] = useState(0);
   const [heroBannerIdx, setHeroBannerIdx] = useState(0);
@@ -736,7 +737,7 @@ export default function Home() {
     return contentRows;
   }, [activeTab, channelRows, seriesRows, contentRows]);
 
-  useEffect(() => { setRowIndex(0); setColIndex(0); setSelectedChannelCategory(null); }, [activeTab, searchQuery]);
+  useEffect(() => { setRowIndex(0); setColIndex(0); setSelectedChannelCategory(null); setRowsFocusActive(false); }, [activeTab, searchQuery]);
   useEffect(() => {
     if (zone === 'hero') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1008,11 +1009,11 @@ export default function Home() {
           case 'ArrowRight':
             e.preventDefault();
             if (heroBtnIndex < 1) setHeroBtnIndex(1);
-            else { setZone('rows'); setRowIndex(0); setColIndex(0); }
+            else { setZone('rows'); setRowIndex(0); setColIndex(0); setRowsFocusActive(true); }
             break;
           case 'ArrowDown':
             e.preventDefault();
-            setZone('rows'); setRowIndex(0); setColIndex(0);
+            setZone('rows'); setRowIndex(0); setColIndex(0); setRowsFocusActive(true);
             break;
           case 'ArrowUp':
             e.preventDefault();
@@ -1029,7 +1030,7 @@ export default function Home() {
           }
           case 'Escape': case 'Backspace':
             e.preventDefault();
-            setZone('rows'); setRowIndex(0); setColIndex(0);
+            setZone('rows'); setRowIndex(0); setColIndex(0); setRowsFocusActive(true);
             break;
         }
 
@@ -1084,12 +1085,12 @@ export default function Home() {
               const cat = channelRows[catFilterIdx - 1]?.title ?? null;
               setSelectedChannelCategory(cat);
             }
-            setZone('rows'); setRowIndex(0); setColIndex(0);
+            setZone('rows'); setRowIndex(0); setColIndex(0); setRowsFocusActive(true);
             break;
           }
           case 'ArrowDown':
             e.preventDefault();
-            setZone('rows'); setRowIndex(0); setColIndex(0);
+            setZone('rows'); setRowIndex(0); setColIndex(0); setRowsFocusActive(true);
             break;
           case 'ArrowUp':
           case 'Escape':
@@ -1105,10 +1106,12 @@ export default function Home() {
         switch (normalizeKey(e)) {
           case 'ArrowRight':
             e.preventDefault();
+            setRowsFocusActive(true);
             setColIndex(p => Math.min(p + 1, currentLen - 1));
             break;
           case 'ArrowLeft': {
             e.preventDefault();
+            setRowsFocusActive(true);
             const gridColsLeft = activeTab === 'channels'
               ? getChannelGridCols()
               : isGridRow(currentRow?.id ?? '') ? getSearchGridCols() : null;
@@ -1119,6 +1122,7 @@ export default function Home() {
           }
           case 'ArrowDown': {
             e.preventDefault();
+            setRowsFocusActive(true);
             const gridColsDown = activeTab === 'channels'
               ? getChannelGridCols()
               : isGridRow(currentRow?.id ?? '') ? getSearchGridCols() : null;
@@ -1140,6 +1144,7 @@ export default function Home() {
           }
           case 'ArrowUp': {
             e.preventDefault();
+            setRowsFocusActive(true);
             const gridColsUp = activeTab === 'channels'
               ? getChannelGridCols()
               : isGridRow(currentRow?.id ?? '') ? getSearchGridCols() : null;
@@ -1180,7 +1185,7 @@ export default function Home() {
     };
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [zone, sidebarIdx, sidebarItems, rowIndex, colIndex, heroBtnIndex, heroBannerIdx, activeRows, seriesRows, activeTab, playItem, playSeriesItem, actionButtons, showProfile, showHint, showShortcutHint, isListening, startListening, stopListening, showHero, hoveredHero, heroBannerItems, openKeyboard, searchQuery, openProfile, catFilterIdx, channelRows, selectedChannelCategory]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [zone, sidebarIdx, sidebarItems, rowIndex, colIndex, rowsFocusActive, heroBtnIndex, heroBannerIdx, activeRows, seriesRows, activeTab, playItem, playSeriesItem, actionButtons, showProfile, showHint, showShortcutHint, isListening, startListening, stopListening, showHero, hoveredHero, heroBannerItems, openKeyboard, searchQuery, openProfile, catFilterIdx, channelRows, selectedChannelCategory]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen bg-background text-white flex select-none" onMouseMove={() => { if (inputModeRef.current !== 'mouse') { inputModeRef.current = 'mouse'; setInputMode('mouse'); } }}>
@@ -1478,7 +1483,7 @@ export default function Home() {
                       title={ch.name}
                       image={ch.logo ?? null}
                       isChannel
-                      isFocused={inputMode === 'keyboard' && zone === 'rows' && rowIndex === 0 && colIndex === cIdx}
+                      isFocused={inputMode === 'keyboard' && rowsFocusActive && zone === 'rows' && rowIndex === 0 && colIndex === cIdx}
                         disableHover={inputMode === 'keyboard'}
                       onClick={() => playItem(ch as ContentItem)}
                     />
@@ -1505,7 +1510,7 @@ export default function Home() {
                           key={s.id}
                           series={s}
                           onClick={() => playSeriesItem(s)}
-                          focused={inputMode === 'keyboard' && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
+                          focused={inputMode === 'keyboard' && rowsFocusActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
                           onHover={inputMode !== 'keyboard' ? () => setHoveredHero({ id: s.id, title: s.title, description: s.description, banner: s.banner, poster: s.poster, category: s.category, genre: s.genre, year: s.year, type: 'series' }) : undefined}
                           onHoverEnd={inputMode !== 'keyboard' ? () => setHoveredHero(null) : undefined}
                         />
@@ -1563,7 +1568,7 @@ export default function Home() {
                     emoji="🎬"
                     items={favoriteMovies as ContentItem[]}
                     focusedIndex={colIndex}
-                    isFocusedRow={inputMode === 'keyboard' && zone === 'rows' && rowIndex === 0}
+                    isFocusedRow={inputMode === 'keyboard' && rowsFocusActive && zone === 'rows' && rowIndex === 0}
                     disableHover={inputMode === 'keyboard'}
                     onItemClick={playItem}
                     onFavoriteToggle={doToggleFav}
@@ -1699,7 +1704,7 @@ export default function Home() {
                             <ContinueWatchingCard
                               key={`${item.type}-${item.id}`}
                               item={item}
-                              focused={inputMode === 'keyboard' && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
+                              focused={inputMode === 'keyboard' && rowsFocusActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
                               onClick={() => {
                                 if (isExpired) { setShowExpiredOverlay(true); return; }
                                 if (item.type === 'external' && item.externalItem) {
@@ -1730,7 +1735,7 @@ export default function Home() {
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                           {row.items.map((item, cIdx) => {
                             const ext = item as unknown as { id: number; title: string; poster?: string; _ytDuration?: string };
-                            const isFocused = inputMode === 'keyboard' && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx;
+                            const isFocused = inputMode === 'keyboard' && rowsFocusActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx;
                             return (
                               <ContentCard
                                 key={item.id}
@@ -1755,7 +1760,7 @@ export default function Home() {
                       emoji={row.emoji}
                       items={row.items}
                       focusedIndex={colIndex}
-                      isFocusedRow={inputMode === 'keyboard' && zone === 'rows' && rowIndex === rIdx}
+                      isFocusedRow={inputMode === 'keyboard' && rowsFocusActive && zone === 'rows' && rowIndex === rIdx}
                       onItemClick={playItem}
                       onFavoriteToggle={doToggleFav}
                       progressMap={progressMap}
