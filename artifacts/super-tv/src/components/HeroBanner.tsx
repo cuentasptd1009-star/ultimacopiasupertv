@@ -65,11 +65,11 @@ export function HeroBanner({ items, onPlay, onInfo, overrideItem, focusedBtnInde
         />
       )}
       {!bgImage && (
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800" />
+        <div className="absolute inset-0 bg-black" />
       )}
 
       <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/60 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/30" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[hsl(0,0%,4%)] via-black/50 to-black/20" />
 
       {focusedBtnIndex !== null && focusedBtnIndex !== undefined && (
         <div className="absolute inset-0 ring-inset ring-2 ring-primary/30 pointer-events-none rounded-none" />
@@ -78,7 +78,7 @@ export function HeroBanner({ items, onPlay, onInfo, overrideItem, focusedBtnInde
       <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-10 md:p-14 max-w-2xl">
         <div className="space-y-2 sm:space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-widest ${item.type === 'series' ? 'bg-blue-600 text-white' : 'bg-primary text-primary-foreground'}`}>
+            <span className="px-2 py-0.5 text-[10px] font-bold rounded uppercase tracking-widest bg-primary text-primary-foreground">
               {item.type === 'series' ? 'Serie' : 'Película'}
             </span>
             {item.genre && <span className="text-white/60 text-xs">{item.genre}</span>}
@@ -98,7 +98,7 @@ export function HeroBanner({ items, onPlay, onInfo, overrideItem, focusedBtnInde
           <div className="flex items-center gap-3 pt-1 sm:pt-3">
             <button
               onClick={() => onPlay(item)}
-              className={`flex items-center gap-2 px-5 sm:px-7 py-2.5 sm:py-3 bg-orange-500 hover:bg-orange-400 text-white rounded-xl font-bold text-sm sm:text-base transition-all active:scale-95 shadow-lg shadow-orange-500/30 ${playFocused ? 'ring-4 ring-white scale-105 shadow-[0_0_20px_rgba(255,255,255,0.4)]' : ''}`}
+              className={`flex items-center gap-2 px-5 sm:px-7 py-2.5 sm:py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-bold text-sm sm:text-base transition-all active:scale-95 shadow-lg shadow-primary/30 ${playFocused ? 'ring-4 ring-white scale-105 shadow-[0_0_20px_rgba(255,255,255,0.4)]' : ''}`}
             >
               <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-white" />
               Ver ahora

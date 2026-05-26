@@ -1369,15 +1369,18 @@ export default function Home() {
 
         {/* Hero Banner */}
         {showHero && (
-          <HeroBanner
-            items={heroBannerItems}
-            overrideItem={hoveredHero}
-            onPlay={playHeroBannerItem}
-            onInfo={item => item.type === 'series' ? setLocation(`/serie/${item.id}`) : setLocation(`/pelicula/${item.id}`)}
-            focusedBtnIndex={zone === 'hero' ? heroBtnIndex : null}
-            currentIndex={heroBannerIdx}
-            onCurrentChange={setHeroBannerIdx}
-          />
+          <div className="relative">
+            <HeroBanner
+              items={heroBannerItems}
+              overrideItem={hoveredHero}
+              onPlay={playHeroBannerItem}
+              onInfo={item => item.type === 'series' ? setLocation(`/serie/${item.id}`) : setLocation(`/pelicula/${item.id}`)}
+              focusedBtnIndex={zone === 'hero' ? heroBtnIndex : null}
+              currentIndex={heroBannerIdx}
+              onCurrentChange={setHeroBannerIdx}
+            />
+            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
+          </div>
         )}
 
         {/* Content area */}
