@@ -815,9 +815,22 @@ export default function Home() {
     } else if ((item as any)._isSeries) {
       setLocation(`/serie/${item.id}`);
     } else {
-      setLocation(`/pelicula/${item.id}`);
+      const mv = item as MovieItem;
+      const url = mv.filePath ?? '';
+      if (!url) { setLocation(`/pelicula/${mv.id}`); return; }
+      const isYouTube = url.includes('youtube.com/') || url.includes('youtu.be/');
+      if (isYouTube) {
+        const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?#]+)/);
+        const videoId = ytMatch?.[1] ?? null;
+        if (videoId) { setExternalPlayer({ type: 'youtube', videoId, title: mv.title, thumbnail: mv.poster ?? undefined }); return; }
+      }
+      const saved = progressMap.get(mv.id);
+      const p = new URLSearchParams({ url, title: mv.title, type: 'movie', movieId: String(mv.id), category: mv.category || '' });
+      if ((mv as any).videoFormat) p.set('format', (mv as any).videoFormat);
+      if (saved && saved.time > 10) p.set('startFrom', String(Math.floor(saved.time)));
+      setLocation(`/vod-player?${p.toString()}`);
     }
-  }, [setLocation, isExpired, allChannels]);
+  }, [setLocation, isExpired, allChannels, progressMap]);
 
   const playSeriesItem = useCallback((series: SeriesItem) => {
     if (isExpired) { setShowExpiredOverlay(true); return; }
@@ -1894,8 +1907,10 @@ export default function Home() {
         onClose={() => setDetailMovie(null)}
         onPlay={() => {
           if (!detailMovie) return;
+          const fullMovie = movies.find(m => m.id === detailMovie.id);
           setDetailMovie(null);
-          setLocation(`/pelicula/${detailMovie.id}`);
+          if (fullMovie) playItem(fullMovie as unknown as ContentItem);
+          else setLocation(`/pelicula/${detailMovie.id}`);
         }}
         onFavoriteToggle={detailMovie ? () => { doToggleFav(detailMovie.id); } : undefined}
       />
