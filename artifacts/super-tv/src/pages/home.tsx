@@ -53,7 +53,8 @@ import lettersLogo from '@assets/super-tv-letters-logo.png';
 import channelDefaultLogo from '@assets/image_1778868245666.png';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 import { ContentRow, isChannel } from '@/components/ContentRow';
-import type { ContentItem } from '@/components/ContentRow';
+import type { ContentItem, MovieItem } from '@/components/ContentRow';
+import { MovieDetailSheet, type MovieInfo } from '@/components/MovieDetailSheet';
 import { ProfileEditor } from '@/components/ProfileEditor';
 import { HeroBanner, type HeroBannerItem } from '@/components/HeroBanner';
 import { fetchSeries, type SeriesItem } from '@/lib/api';
@@ -485,6 +486,7 @@ export default function Home() {
   });
 
   const [favorites, setFavorites] = useState<number[]>(() => getFavorites());
+  const [detailMovie, setDetailMovie] = useState<MovieInfo | null>(null);
   const [seriesFavIds, setSeriesFavIds] = useState<number[]>(() => getSeriesFavorites());
   const [channelFavIds, setChannelFavIds] = useState<number[]>(() => getChannelFavorites());
 
@@ -852,6 +854,12 @@ export default function Home() {
   }, []);
 
   const doToggleFav = useCallback((movieId: number) => { toggleFavorite(movieId); setFavorites(getFavorites()); }, []);
+  const handleInfoItem = useCallback((item: ContentItem) => {
+    if (!isChannel(item)) {
+      const mv = item as MovieItem;
+      setDetailMovie({ id: mv.id, title: mv.title, poster: mv.poster, description: mv.description, genre: mv.genre, year: mv.year, category: mv.category, duration: mv.duration });
+    }
+  }, []);
   const handleLogout = () => { clearTokens(); setLocation('/'); };
   const handleInstall = () => { if (canInstall) install(); else setShowHint(true); };
   const handleShortcut = () => setShowShortcutHint(true);
@@ -1546,6 +1554,7 @@ export default function Home() {
                     disableHover={inputMode === 'keyboard'}
                     onItemClick={playItem}
                     onFavoriteToggle={doToggleFav}
+                    onInfoItem={handleInfoItem}
                     progressMap={progressMap}
                     favSet={favSet}
                   />
@@ -1741,6 +1750,7 @@ export default function Home() {
                       isNewFn={row.showBadge ? isNew : undefined}
                       showProgress={row.showProgress}
                       onHoverItem={(item) => setHoveredHero(item ? { ...item, type: 'movie' } : null)}
+                      onInfoItem={handleInfoItem}
                       disableHover={inputMode === 'keyboard'}
                     />
                   );
@@ -1876,6 +1886,19 @@ export default function Home() {
           onFavsUpdate={() => setExternalFavs(getExternalFavorites())}
         />
       )}
+
+      {/* ── MOVIE DETAIL SHEET ── */}
+      <MovieDetailSheet
+        movie={detailMovie}
+        isFavorite={detailMovie ? favorites.includes(detailMovie.id) : false}
+        onClose={() => setDetailMovie(null)}
+        onPlay={() => {
+          if (!detailMovie) return;
+          setDetailMovie(null);
+          setLocation(`/pelicula/${detailMovie.id}`);
+        }}
+        onFavoriteToggle={detailMovie ? () => { doToggleFav(detailMovie.id); } : undefined}
+      />
     </div>
   );
 }

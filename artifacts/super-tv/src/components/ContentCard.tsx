@@ -1,6 +1,6 @@
 import { memo, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Heart, Film, VolumeX, Volume2 } from 'lucide-react';
+import { Play, Heart, Film, VolumeX, Volume2, Info } from 'lucide-react';
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
 
@@ -57,6 +57,7 @@ interface ContentCardProps {
   portrait?: boolean;
   previewUrl?: string | null;
   onClick: () => void;
+  onInfoClick?: (e: React.MouseEvent) => void;
   onFavoriteToggle?: (e: React.MouseEvent) => void;
   onHover?: () => void;
   onHoverEnd?: () => void;
@@ -77,6 +78,7 @@ export const ContentCard = memo(function ContentCard({
   portrait = false,
   previewUrl,
   onClick,
+  onInfoClick,
   onFavoriteToggle,
   onHover,
   onHoverEnd,
@@ -512,6 +514,18 @@ export const ContentCard = memo(function ContentCard({
             <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded z-10 shadow-md tabular-nums">
               {duration}
             </span>
+          )}
+
+          {!isChannel && onInfoClick && (
+            <button
+              className={`absolute bottom-1.5 left-1.5 p-1.5 rounded-full bg-black/70 z-10 hover:bg-black/90 hover:scale-110 transition-all duration-150 ${
+                isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              }`}
+              onClick={onInfoClick}
+              title="Ver detalles"
+            >
+              <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
+            </button>
           )}
 
           {!isChannel && onFavoriteToggle && (

@@ -55,6 +55,7 @@ interface ContentRowProps {
   onHoverItem?: (item: HeroBannerItem | null) => void;
   portrait?: boolean;
   disableHover?: boolean;
+  onInfoItem?: (item: ContentItem) => void;
 }
 
 export const ContentRow = memo(function ContentRow({
@@ -73,6 +74,7 @@ export const ContentRow = memo(function ContentRow({
   onHoverItem,
   portrait = false,
   disableHover = false,
+  onInfoItem,
 }: ContentRowProps) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -151,6 +153,7 @@ export const ContentRow = memo(function ContentRow({
               duration={!ch ? fmtDuration((item as MovieItem).duration) ?? undefined : undefined}
               previewUrl={!ch ? (item as MovieItem).filePath ?? undefined : undefined}
               onClick={() => onItemClick(item)}
+              onInfoClick={!ch && onInfoItem ? (e) => { e.stopPropagation(); onInfoItem(item); } : undefined}
               onFavoriteToggle={
                 !ch && onFavoriteToggle
                   ? (e) => {
