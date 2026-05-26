@@ -147,7 +147,7 @@ function MovieGridCard({
         onClick={onClick}
         className={`group flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${
           isFocused
-            ? 'ring-4 ring-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.5)] z-10'
+            ? 'ring-4 ring-primary scale-105 shadow-[0_0_20px_rgba(220,38,38,0.5)] z-10'
             : 'hover:scale-105 hover:ring-1 hover:ring-white/20'
         }`}
       >
@@ -556,7 +556,7 @@ export default function MovieDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#141414] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -566,7 +566,7 @@ export default function MovieDetail() {
       <div className="min-h-screen bg-[#141414] flex flex-col items-center justify-center gap-4 text-center px-4">
         <Film className="w-16 h-16 text-white/20" />
         <p className="text-white/50">Película no encontrada</p>
-        <button onClick={handleBack} className="text-orange-400 text-sm hover:underline">Volver al inicio</button>
+        <button onClick={handleBack} className="text-primary text-sm hover:underline">Volver al inicio</button>
       </div>
     );
   }
@@ -633,7 +633,7 @@ export default function MovieDetail() {
 
         <div className="absolute bottom-0 left-0 p-6 sm:p-10 md:p-14 max-w-2xl space-y-3 sm:space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="px-2.5 py-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-lg uppercase tracking-widest">
+            <span className="px-2.5 py-0.5 bg-primary text-white text-[10px] font-bold rounded-lg uppercase tracking-widest">
               Película
             </span>
             {(movie as any).genre && (
@@ -666,7 +666,7 @@ export default function MovieDetail() {
           {savedProgress && savedProgress.duration > 0 && (
             <div className="flex items-center gap-3 max-w-xs">
               <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 rounded-full" style={{ width: `${Math.min(100, (savedProgress.time / savedProgress.duration) * 100)}%` }} />
+                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (savedProgress.time / savedProgress.duration) * 100)}%` }} />
               </div>
               <span className="text-[11px] text-white/50">{formatProgress(savedProgress.time)}</span>
             </div>
@@ -677,7 +677,7 @@ export default function MovieDetail() {
               <>
                 <button
                   onClick={() => handlePlay(savedProgress!.time)}
-                  className={`flex items-center gap-2.5 px-6 sm:px-8 py-3 bg-orange-500 hover:bg-orange-400 text-white rounded-xl font-bold text-sm sm:text-base transition-all active:scale-95 shadow-lg shadow-orange-500/30 ${mvZone === 'buttons' && btnIndex === 0 ? 'ring-4 ring-white scale-105 shadow-[0_0_25px_rgba(255,165,0,0.6)]' : ''}`}
+                  className={`flex items-center gap-2.5 px-6 sm:px-8 py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-bold text-sm sm:text-base transition-all active:scale-95 shadow-lg shadow-primary/30 ${mvZone === 'buttons' && btnIndex === 0 ? 'ring-4 ring-white scale-105 shadow-[0_0_25px_rgba(220,38,38,0.6)]' : ''}`}
                 >
                   {isExpired ? <Lock className="w-5 h-5" /> : <Play className="w-5 h-5 fill-white" />}
                   {isExpired ? 'Acceso vencido' : `Continuar (${formatProgress(savedProgress!.time)})`}
@@ -691,9 +691,9 @@ export default function MovieDetail() {
                 </button>
                 <button
                   onClick={handleToggleFav}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 border backdrop-blur-sm ${isFav ? 'bg-orange-500/20 border-orange-500/40 text-orange-300 hover:bg-orange-500/30' : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/20'} ${mvZone === 'buttons' && btnIndex === 2 ? 'ring-4 ring-white scale-105' : ''}`}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 border backdrop-blur-sm ${isFav ? 'bg-primary/20 border-primary/40 text-primary/80 hover:bg-primary/30' : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/20'} ${mvZone === 'buttons' && btnIndex === 2 ? 'ring-4 ring-white scale-105' : ''}`}
                 >
-                  <Heart className={`w-4 h-4 ${isFav ? 'fill-orange-400 text-orange-400' : ''}`} />
+                  <Heart className={`w-4 h-4 ${isFav ? 'fill-primary text-primary' : ''}`} />
                   {isFav ? 'En favoritos' : 'Favorito'}
                 </button>
                 <button
@@ -708,16 +708,16 @@ export default function MovieDetail() {
               <>
                 <button
                   onClick={() => handlePlay()}
-                  className={`flex items-center gap-2.5 px-7 sm:px-10 py-3 bg-orange-500 hover:bg-orange-400 text-white rounded-xl font-bold text-sm sm:text-base transition-all active:scale-95 shadow-lg shadow-orange-500/30 ${mvZone === 'buttons' && btnIndex === 0 ? 'ring-4 ring-white scale-105 shadow-[0_0_25px_rgba(255,165,0,0.6)]' : ''}`}
+                  className={`flex items-center gap-2.5 px-7 sm:px-10 py-3 bg-primary hover:bg-primary/80 text-white rounded-xl font-bold text-sm sm:text-base transition-all active:scale-95 shadow-lg shadow-primary/30 ${mvZone === 'buttons' && btnIndex === 0 ? 'ring-4 ring-white scale-105 shadow-[0_0_25px_rgba(220,38,38,0.6)]' : ''}`}
                 >
                   {isExpired ? <Lock className="w-5 h-5" /> : <Play className="w-5 h-5 fill-white" />}
                   {isExpired ? 'Acceso vencido' : 'Ver ahora'}
                 </button>
                 <button
                   onClick={handleToggleFav}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 border backdrop-blur-sm ${isFav ? 'bg-orange-500/20 border-orange-500/40 text-orange-300 hover:bg-orange-500/30' : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/20'} ${mvZone === 'buttons' && btnIndex === 1 ? 'ring-4 ring-white scale-105' : ''}`}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 border backdrop-blur-sm ${isFav ? 'bg-primary/20 border-primary/40 text-primary/80 hover:bg-primary/30' : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/20'} ${mvZone === 'buttons' && btnIndex === 1 ? 'ring-4 ring-white scale-105' : ''}`}
                 >
-                  <Heart className={`w-4 h-4 ${isFav ? 'fill-orange-400 text-orange-400' : ''}`} />
+                  <Heart className={`w-4 h-4 ${isFav ? 'fill-primary text-primary' : ''}`} />
                   {isFav ? 'En favoritos' : 'Favorito'}
                 </button>
                 <button
@@ -747,7 +747,7 @@ export default function MovieDetail() {
         <section data-mv-zone="catpills" className="px-4 sm:px-8 md:px-14 py-8 space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex items-center gap-2 flex-1">
-              <div className="w-1 h-6 bg-orange-500 rounded-full" />
+              <div className="w-1 h-6 bg-primary rounded-full" />
               <h2 className="text-lg sm:text-xl font-bold text-white">
                 {filterCat ? `Más en "${filterCat}"` : 'Más películas'}
               </h2>
@@ -757,7 +757,7 @@ export default function MovieDetail() {
               <button
                 onClick={() => { setFilterCat(null); setCatPillIdx(0); }}
                 className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all
-                  ${!filterCat ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/50 hover:text-white hover:bg-white/15'}
+                  ${!filterCat ? 'bg-primary text-white' : 'bg-white/10 text-white/50 hover:text-white hover:bg-white/15'}
                   ${mvZone === 'catpills' && catPillIdx === 0 ? 'ring-2 ring-white scale-105' : ''}`}
               >
                 Todas
@@ -767,7 +767,7 @@ export default function MovieDetail() {
                   key={cat}
                   onClick={() => { setFilterCat(cat === filterCat ? null : cat); setCatPillIdx(i + 1); }}
                   className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all
-                    ${filterCat === cat ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/50 hover:text-white hover:bg-white/15'}
+                    ${filterCat === cat ? 'bg-primary text-white' : 'bg-white/10 text-white/50 hover:text-white hover:bg-white/15'}
                     ${mvZone === 'catpills' && catPillIdx === i + 1 ? 'ring-2 ring-white scale-105' : ''}`}
                 >
                   {cat}

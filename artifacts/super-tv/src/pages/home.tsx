@@ -136,7 +136,7 @@ function SeriesCard({ series, onClick, focused, onHover, onHoverEnd }: { series:
           <Play className="w-6 h-6 text-white fill-white mx-auto" />
         </div>
         <div className="absolute top-1.5 left-1.5">
-          <span className="px-1.5 py-0.5 bg-blue-600/90 text-white text-[9px] font-bold rounded uppercase tracking-wider">Serie</span>
+          <span className="px-1.5 py-0.5 bg-primary/90 text-white text-[9px] font-bold rounded uppercase tracking-wider">Serie</span>
         </div>
       </div>
       <div className="p-2 bg-card">
@@ -184,7 +184,7 @@ function ContinueWatchingCard({ item, onClick, focused }: { item: ContinueItemDa
           <Play className="w-7 h-7 text-white fill-white mx-auto opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
         </div>
         <div className="absolute top-1.5 left-1.5">
-          <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider ${isExternal ? 'bg-emerald-600/90 text-white' : item.type === 'series' ? 'bg-blue-600/90 text-white' : 'bg-primary/90 text-primary-foreground'}`}>
+          <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider ${isExternal ? 'bg-primary/90 text-white' : item.type === 'series' ? 'bg-primary/90 text-white' : 'bg-primary/90 text-primary-foreground'}`}>
             {isExternal ? 'Online' : item.type === 'series' ? 'Serie' : 'Película'}
           </span>
         </div>
@@ -1197,7 +1197,7 @@ export default function Home() {
               className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-150
                 ${isActive ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white hover:bg-white/8'}`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'text-orange-400' : ''}`} />
+              <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : ''}`} />
             </button>
           );
         })}
@@ -1312,9 +1312,9 @@ export default function Home() {
                   ${isActive ? 'bg-white/12 text-white' : 'text-white/55 hover:text-white hover:bg-white/7'}
                   ${isFocused ? 'ring-2 ring-primary/60' : ''}`}
               >
-                <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${isActive ? 'text-orange-400' : ''}`} />
+                <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${isActive ? 'text-primary' : ''}`} />
                 {item.label}
-                {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-400" />}
+                {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
               </button>
             );
           })}
@@ -1360,7 +1360,7 @@ export default function Home() {
 
         {/* Expiry warning */}
         {showExpiryBanner && (
-          <div className={`flex items-center gap-3 px-5 py-2.5 text-sm font-medium ${daysLeft !== null && daysLeft <= 0 ? 'bg-red-600/20 text-red-300' : daysLeft === 1 ? 'bg-orange-500/15 text-orange-300' : 'bg-yellow-500/10 text-yellow-300'}`}>
+          <div className={`flex items-center gap-3 px-5 py-2.5 text-sm font-medium ${daysLeft !== null && daysLeft <= 0 ? 'bg-red-600/20 text-red-300' : daysLeft === 1 ? 'bg-primary/15 text-primary/80' : 'bg-primary/10 text-primary/70'}`}>
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
             <span className="flex-1 text-xs">{daysLeft !== null && daysLeft <= 0 ? 'Tu código venció. Contacta a tu proveedor para activarlo.' : daysLeft === 1 ? 'Tu acceso vence hoy. Renueva con tu proveedor.' : `Tu acceso vence en ${daysLeft} días.`}</span>
             <button onClick={dismissExpiryBanner} className="flex-shrink-0 opacity-60 hover:opacity-100"><X className="w-4 h-4" /></button>
@@ -1811,9 +1811,9 @@ export default function Home() {
               onClick={() => { setActiveTab(item.key); setRowIndex(0); setColIndex(0); setZone('rows'); }}
               className={`flex-1 flex flex-col items-center gap-1 py-2.5 transition-all ${isActive ? 'text-white' : 'text-white/35 hover:text-white/60'}`}
             >
-              <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-orange-400' : ''}`} />
+              <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-primary' : ''}`} />
               <span className="text-[9px] font-medium">{item.label}</span>
-              {isActive && <div className="w-1 h-1 rounded-full bg-orange-400" />}
+              {isActive && <div className="w-1 h-1 rounded-full bg-primary" />}
             </button>
           );
         })}
