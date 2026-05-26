@@ -212,7 +212,7 @@ function ChannelCard({ ch, onClick, focused }: { ch: Channel; onClick: () => voi
     <div
       onClick={onClick}
       data-tv-focused={focused ? 'true' : undefined}
-      className={`relative rounded-xl cursor-pointer transition-all duration-200 overflow-hidden aspect-square bg-[#0d0d1a] ${focused ? 'ring-2 ring-primary scale-105 shadow-[0_0_16px_rgba(220,38,38,0.4)] z-10' : 'hover:scale-[1.04]'}`}
+      className={`relative rounded-xl cursor-pointer transition-all duration-200 overflow-hidden aspect-square bg-background ${focused ? 'ring-2 ring-primary scale-105 shadow-[0_0_16px_rgba(220,38,38,0.4)] z-10' : 'hover:scale-[1.04]'}`}
     >
       {ch.logo ? (
         <>
@@ -1158,11 +1158,11 @@ export default function Home() {
   }, [zone, sidebarIdx, sidebarItems, rowIndex, colIndex, heroBtnIndex, heroBannerIdx, activeRows, seriesRows, activeTab, playItem, playSeriesItem, actionButtons, showProfile, showHint, showShortcutHint, isListening, startListening, stopListening, showHero, hoveredHero, heroBannerItems, openKeyboard, searchQuery, openProfile, catFilterIdx, channelRows, selectedChannelCategory]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="min-h-screen bg-[#141414] text-white flex select-none">
+    <div className="min-h-screen bg-background text-white flex select-none">
 
       {/* ── EXPIRED OVERLAY ── */}
       {isExpired && showExpiredOverlay && (
-        <div className="fixed inset-0 z-[200] bg-[#0a0a0a] flex flex-col items-center justify-center gap-6 text-center px-6">
+        <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-6 text-center px-6">
           <button onClick={() => setShowExpiredOverlay(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors text-white/50 hover:text-white"><X className="w-5 h-5" /></button>
           <div className="flex flex-col items-center gap-4">
             <div className="w-20 h-20 rounded-full bg-destructive/15 flex items-center justify-center"><Lock className="w-10 h-10 text-destructive" /></div>
@@ -1177,7 +1177,7 @@ export default function Home() {
 
       {/* ── NARROW ICON RAIL (desktop, always visible) ── */}
       <div
-        className="hidden md:flex fixed left-0 top-0 h-full z-50 w-16 bg-[#0a0a0a] border-r border-white/5 flex-col items-center py-4 gap-1"
+        className="hidden md:flex fixed left-0 top-0 h-full z-50 w-16 bg-background border-r border-white/5 flex-col items-center py-4 gap-1"
         onMouseEnter={openSidebarHover}
         onMouseLeave={closeSidebarHover}
       >
@@ -1235,7 +1235,7 @@ export default function Home() {
       {/* ── FULL SIDEBAR OVERLAY ── */}
       {showSidebar && <div className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm" onClick={() => { setSidebarMouseOpen(false); setZone('rows'); }} />}
       <aside
-        className={`fixed left-0 top-0 h-full z-[60] bg-[#0d0d0d] border-r border-white/8 flex flex-col transition-all duration-300 w-72 shadow-2xl
+        className={`fixed left-0 top-0 h-full z-[60] bg-background border-r border-white/8 flex flex-col transition-all duration-300 w-72 shadow-2xl
           ${showSidebar ? 'translate-x-0' : '-translate-x-full'}`}
         onMouseEnter={openSidebarHover}
         onMouseLeave={closeSidebarHover}
@@ -1342,7 +1342,7 @@ export default function Home() {
       <main className="flex-1 min-h-screen flex flex-col pb-16 md:pb-0 overflow-x-hidden md:ml-16" ref={mainRef}>
 
         {/* Mobile top bar */}
-        <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-[#0d0d0d] border-b border-white/5">
+        <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-background border-b border-white/5">
           <button onClick={() => { setSidebarMouseOpen(true); setZone('sidebar'); }} className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors">
             <Menu className="w-5 h-5" />
           </button>
@@ -1831,7 +1831,7 @@ export default function Home() {
 
       {showHint && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 p-4" onClick={() => setShowHint(false)}>
-          <div className="bg-[#1e1e1e] border border-white/10 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-card border border-white/10 rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl" onClick={e => e.stopPropagation()}>
             {isIosSafari ? (
               <>
                 <div className="flex items-center gap-3"><Share2 className="w-6 h-6 text-primary flex-shrink-0" /><h2 className="text-base font-bold text-white">Instalar en iPhone / iPad</h2></div>
@@ -1854,7 +1854,7 @@ export default function Home() {
 
       {showShortcutHint && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setShowShortcutHint(false)}>
-          <div className="bg-[#1e1e1e] border border-white/10 rounded-2xl p-6 max-w-sm w-full space-y-3 shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-card border border-white/10 rounded-2xl p-6 max-w-sm w-full space-y-3 shadow-2xl" onClick={e => e.stopPropagation()}>
             <h2 className="text-base font-bold text-white">Acceso directo al escritorio</h2>
             <p className="text-sm text-white/60">En tu navegador, busca la opción "Agregar a pantalla de inicio" o "Instalar aplicación" para crear un acceso directo.</p>
             <button onClick={() => setShowShortcutHint(false)} className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors">Entendido</button>
