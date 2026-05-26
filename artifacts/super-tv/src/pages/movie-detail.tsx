@@ -9,7 +9,6 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import logo from '@assets/logo_supertv.png';
 import { ContentCard, extractYouTubeId } from '@/components/ContentCard';
-import { YouTubePlayerPage } from '@/components/YouTubePlayerPage';
 import { useTvKeyboard } from '@/hooks/use-tv-keyboard';
 
 function formatProgress(secs: number): string {
@@ -336,15 +335,6 @@ export default function MovieDetail() {
     if (isExpired) { setShowExpiredOverlay(true); return; }
     if (!movie) return;
     const url = movie.filePath ?? '';
-    const isYouTube = url.includes('youtube.com/') || url.includes('youtu.be/');
-    if (isYouTube) {
-      const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s?#]+)/);
-      const videoId = ytMatch?.[1] ?? null;
-      if (videoId) {
-        setExternalPlayer({ type: 'youtube', videoId, title: movie.title, thumbnail: movie.poster ?? undefined });
-        return;
-      }
-    }
     const p = new URLSearchParams({
       url,
       title: movie.title,
@@ -587,13 +577,6 @@ export default function MovieDetail() {
         </div>
       )}
 
-      {externalPlayer && externalPlayer.type === 'youtube' && externalPlayer.videoId && (
-        <YouTubePlayerPage
-          videoId={externalPlayer.videoId}
-          title={externalPlayer.title}
-          onBack={() => setExternalPlayer(null)}
-        />
-      )}
       {externalPlayer && externalPlayer.type === 'archive' && externalPlayer.url && (
         <div className="fixed inset-0 z-[90] bg-black flex flex-col items-center justify-center" onClick={() => setExternalPlayer(null)}>
           <div className="w-full max-w-3xl aspect-video" onClick={e => e.stopPropagation()}>

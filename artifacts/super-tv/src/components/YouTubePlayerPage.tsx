@@ -131,10 +131,12 @@ export function YouTubePlayerPage({ videoId, title, onBack, isFav, onFavToggle, 
 
     loadYouTubeApi(() => {
       if (destroyed || !playerDivRef.current) return;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
       ytPlayerRef.current = new (window as any).YT.Player(playerDivRef.current, {
         videoId,
-        width: '100%',
-        height: '100%',
+        width: String(vw),
+        height: String(vh),
         playerVars: {
           autoplay: 1,
           controls: 0,
@@ -151,19 +153,15 @@ export function YouTubePlayerPage({ videoId, title, onBack, isFav, onFavToggle, 
             if (!destroyed) {
               const d = e.target.getDuration?.() ?? 0;
               if (d > 0) setDuration(d);
-              // Force the iframe YouTube creates to fill the container using explicit properties
               try {
                 const iframe = e.target.getIframe() as HTMLIFrameElement | null;
                 if (iframe) {
-                  iframe.style.cssText = 'position:absolute;top:0;left:0;bottom:0;right:0;width:100%;height:100%;border:0;display:block;';
+                  iframe.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;min-width:100%;min-height:100%;border:0;display:block;';
                 }
-                // Also force the container div to be properly positioned
                 if (playerDivRef.current) {
-                  playerDivRef.current.style.cssText = 'position:absolute;top:0;left:0;bottom:0;right:0;width:100%;height:100%;';
+                  playerDivRef.current.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;';
                 }
               } catch {}
-              // Mobile browsers block autoplay without a direct user gesture.
-              // The user must tap the pre-play overlay (startPlayback) to begin.
             }
           },
           onError: (e: any) => {
@@ -450,8 +448,8 @@ export function YouTubePlayerPage({ videoId, title, onBack, isFav, onFavToggle, 
       tabIndex={-1}
       className="bg-black overflow-hidden outline-none"
       style={isCssFullscreen
-        ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', zIndex: 9999 }
-        : { position: 'relative', width: '100%', height: '100vh' }}
+        ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', zIndex: 9999, touchAction: 'none' }
+        : { position: 'relative', width: '100vw', height: '100vh', touchAction: 'none' }}
       onMouseMove={() => { if (hasStarted) flashControls(); }}
       onTouchStart={() => { if (hasStarted) flashControls(); }}
       onClick={() => containerRef.current?.focus({ preventScroll: true })}
@@ -459,7 +457,7 @@ export function YouTubePlayerPage({ videoId, title, onBack, isFav, onFavToggle, 
       {/* YouTube iframe mounts here */}
       <div
         ref={playerDivRef}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', minHeight: 0 }}
       />
 
       {/* Click catcher to block YouTube UI when playing */}
