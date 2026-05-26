@@ -45,16 +45,88 @@
 
       })();
     </script>
+  <style>
+    #app-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #090E17;
+      color: #ffffff;
+      font-family: Inter, sans-serif;
+      gap: 24px;
+    }
+    #app-loading .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255,255,255,0.15);
+      border-top-color: #e11d48;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #app-loading p { color: rgba(255,255,255,0.5); font-size: 14px; margin: 0; }
+    #app-error {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #090E17;
+      color: #ffffff;
+      font-family: Inter, sans-serif;
+      text-align: center;
+      padding: 32px;
+      gap: 16px;
+    }
+    #app-error h2 { font-size: 20px; margin: 0; }
+    #app-error p { color: rgba(255,255,255,0.5); font-size: 13px; margin: 0; max-width: 320px; line-height: 1.6; }
+    #app-error button {
+      margin-top: 8px;
+      padding: 10px 24px;
+      background: #e11d48;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
   </head>
   <body>
+    <div id="app-loading">
+      <div class="spinner"></div>
+      <p>Cargando Super TV…</p>
+    </div>
+    <div id="app-error">
+      <h2>No se pudo cargar Super TV</h2>
+      <p>Tu navegador puede no ser compatible. Intenta actualizar la página o usar otro navegador.</p>
+      <button onclick="location.reload()">Reintentar</button>
+    </div>
     <div id="root"></div>
+    <script>
+      window.__appStarted = false;
+      window.onerror = function() {
+        if (!window.__appStarted) {
+          document.getElementById('app-loading').style.display = 'none';
+          document.getElementById('app-error').style.display = 'flex';
+        }
+      };
+      setTimeout(function() {
+        if (!window.__appStarted) {
+          document.getElementById('app-loading').style.display = 'none';
+          document.getElementById('app-error').style.display = 'flex';
+        }
+      }, 15000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+        window.addEventListener('load', function() {
           navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW registered:', reg.scope))
-            .catch(err => console.log('SW registration failed:', err));
+            .then(function(reg) { console.log('SW registered:', reg.scope); })
+            .catch(function(err) { console.log('SW registration failed:', err); });
         });
       }
     </script>
