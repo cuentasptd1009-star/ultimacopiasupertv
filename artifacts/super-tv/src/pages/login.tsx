@@ -10,7 +10,7 @@ import { useTvKeyboard } from '@/hooks/use-tv-keyboard';
 import { Download, Share2, Smartphone, QrCode, X, Tv, CheckCircle, Loader2, Eye, EyeOff, Bookmark, BookmarkCheck } from 'lucide-react';
 import logo from '@assets/imagen_1777670460131.png';
 
-type FocusZone = 'input' | 'submit' | 'qr' | 'install' | 'shortcut';
+type FocusZone = 'input' | 'remember' | 'submit' | 'qr' | 'install' | 'shortcut';
 
 function getOrCreateDeviceId(): string {
   try {
@@ -64,11 +64,13 @@ export default function Login() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
+  const rememberRef = useRef<HTMLButtonElement>(null);
   const codeRef = useRef(code);
   const qrRef = useRef<HTMLButtonElement>(null);
   const installRef = useRef<HTMLButtonElement>(null);
   const shortcutRef = useRef<HTMLButtonElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoLoginDone = useRef(false);
 
   const openQrModal = useCallback(async () => {
     setQrActivated(false);
@@ -115,8 +117,39 @@ export default function Login() {
     if (getToken('user')) setLocation('/home');
   }, [setLocation]);
 
+  // Auto-login if there's a remembered code
+  useEffect(() => {
+    if (autoLoginDone.current) return;
+    const saved = (() => { try { return localStorage.getItem('supertv_remembered_code'); } catch { return null; } })();
+    if (!saved) return;
+    autoLoginDone.current = true;
+    const timer = setTimeout(() => {
+      codeRef.current = saved;
+      loginMutation.mutate(
+        { data: { code: saved, deviceId: navigator.userAgent } },
+        {
+          onSuccess: (data) => {
+            if (data.sessionConflict) {
+              setConflictMessage('Tu código está abierto en otro dispositivo. Se cerrará la otra sesión en 4 segundos...');
+              setTimeout(() => { setToken(data.token, 'user'); setLocation('/home'); }, 4000);
+            } else {
+              setToken(data.token, 'user');
+              setLocation('/home');
+            }
+          },
+          onError: () => {
+            // Silent fail — user can enter manually
+          },
+        }
+      );
+    }, 600);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (focusZone === 'input') inputRef.current?.focus();
+    else if (focusZone === 'remember') rememberRef.current?.focus();
     else if (focusZone === 'submit') submitRef.current?.focus();
     else if (focusZone === 'qr') qrRef.current?.focus();
     else if (focusZone === 'install') installRef.current?.focus();
@@ -203,7 +236,8 @@ export default function Login() {
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          if (focusZone === 'input') setFocusZone('submit');
+          if (focusZone === 'input') setFocusZone('remember');
+          else if (focusZone === 'remember') setFocusZone('submit');
           else if (focusZone === 'submit') setFocusZone('qr');
           else if (focusZone === 'qr' && showInstallButton) setFocusZone('install');
           else if (focusZone === 'qr') setFocusZone('shortcut');
@@ -215,7 +249,8 @@ export default function Login() {
           else if (focusZone === 'shortcut') setFocusZone('qr');
           else if (focusZone === 'install') setFocusZone('qr');
           else if (focusZone === 'qr') setFocusZone('submit');
-          else if (focusZone === 'submit') setFocusZone('input');
+          else if (focusZone === 'submit') setFocusZone('remember');
+          else if (focusZone === 'remember') setFocusZone('input');
           break;
         case 'Enter':
           if (focusZone === 'input') {
@@ -237,6 +272,9 @@ export default function Login() {
             } else {
               handleSubmit();
             }
+          } else if (focusZone === 'remember' && !isTyping) {
+            e.preventDefault();
+            handleRemember();
           } else if (focusZone === 'submit' && !isTyping) {
             e.preventDefault();
             handleSubmit();
@@ -304,14 +342,16 @@ export default function Login() {
 
             {/* Remember button */}
             <button
+              ref={rememberRef}
               type="button"
               onClick={handleRemember}
+              onFocus={() => setFocusZone('remember')}
               disabled={!code.trim() && !isRemembered}
               className={`w-full flex items-center justify-center gap-2 py-2 text-sm rounded-lg border transition-all ${
                 isRemembered
                   ? 'border-primary/60 bg-primary/10 text-primary'
                   : 'border-border text-muted-foreground hover:text-foreground hover:border-border/80 disabled:opacity-30 disabled:cursor-not-allowed'
-              }`}
+              } ${focusZone === 'remember' ? focusRing : ''}`}
             >
               {isRemembered
                 ? <><BookmarkCheck className="w-4 h-4" /> Código recordado — toca para olvidar</>
