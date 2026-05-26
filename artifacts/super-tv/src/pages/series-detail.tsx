@@ -7,7 +7,7 @@ import { clearTokens } from '@/lib/auth';
 import { fetchSeriesDetail } from '@/lib/api';
 import type { SeriesDetail, Season, Episode } from '@/lib/api';
 import { getEpisodeProgress, getSeriesProgress, toggleSeriesFavorite, getSeriesFavorites } from '@/lib/user-data';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 import { YouTubePlayerPage } from '@/components/YouTubePlayerPage';
 
 function extractYtId(url: string): string | null {

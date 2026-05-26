@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, Tv, AlertCircle, Loader2 } from 'lucide-react';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 import { apiBase } from '@/lib/api';
 
 export default function Activar() {

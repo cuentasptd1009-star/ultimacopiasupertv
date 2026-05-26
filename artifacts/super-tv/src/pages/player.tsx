@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, ArrowLeft, RotateCcw, SkipBack, SkipForward, AlertTriangle, Lock, Minimize2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { YouTubePlayerPage } from '@/components/YouTubePlayerPage';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 import { useGetMe, getGetMeQueryKey } from '@workspace/api-client-react';
 import { getProgress, saveProgress, addToHistory, saveEpisodeProgress, getEpisodeProgress } from '@/lib/user-data';
 import { getMiniPlayerState, setMiniPlayerState, updateMiniPlayerState } from '@/lib/mini-player-state';

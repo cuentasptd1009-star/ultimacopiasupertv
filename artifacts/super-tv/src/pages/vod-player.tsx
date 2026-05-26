@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, ArrowLeft, RotateCcw, SkipBack, SkipForward, AlertTriangle, ChevronRight } from 'lucide-react';
 import { YouTubePlayerPage } from '@/components/YouTubePlayerPage';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 import { getProgress, saveProgress, addToHistory, saveEpisodeProgress, getEpisodeProgress } from '@/lib/user-data';
 import { normalizeKey } from '@/lib/tv-remote';
 

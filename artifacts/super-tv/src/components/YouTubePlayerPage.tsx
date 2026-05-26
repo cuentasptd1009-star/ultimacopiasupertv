@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Play, Pause, ArrowLeft, Maximize2, Minimize2, SkipBack, SkipForward, Heart, ChevronRight } from 'lucide-react';
 import { loadYouTubeApi } from '@/lib/youtube-api';
 import { saveProgress, saveEpisodeProgress, saveExternalProgress, clearExternalProgress } from '@/lib/user-data';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 
 interface Props {
   videoId: string;

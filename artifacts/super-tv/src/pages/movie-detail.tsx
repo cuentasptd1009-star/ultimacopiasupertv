@@ -7,7 +7,7 @@ import { getProgress, toggleFavorite, getFavorites, toggleExternalFavorite, isEx
 import { clearTokens, getToken } from '@/lib/auth';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 import { ContentCard, extractYouTubeId } from '@/components/ContentCard';
 import { YouTubePlayerPage } from '@/components/YouTubePlayerPage';
 import { useTvKeyboard } from '@/hooks/use-tv-keyboard';

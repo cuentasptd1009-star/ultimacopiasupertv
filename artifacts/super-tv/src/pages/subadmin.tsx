@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Wallet, Key, Package as PackageIcon, LogOut, ShoppingCart, Copy, Trash2, RefreshCw, Search, X, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 
 function minutesToLabel(minutes: number): string {
   if (minutes >= 365 * 24 * 60 && minutes % (365 * 24 * 60) === 0)

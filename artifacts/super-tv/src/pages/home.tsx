@@ -48,7 +48,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Play, Pause, LogOut, Search, Tv, Film, Tv2, X, Download, Share2, UserCircle2, AlertTriangle, Lock, Mic, MicOff, Home as HomeIcon, Smartphone, Menu, Heart, Clock, Trash2, Youtube, Maximize2, Minimize2 } from 'lucide-react';
 import { getFavorites, getAllProgress, getHistory, toggleFavorite, getAllSeriesProgress, getExternalFavorites, getExternalHistory, toggleExternalFavorite, addExternalHistory, isExternalFavorite, removeExternalHistory, clearExternalHistory, type ExternalItem, getSearchHistory, addSearchHistory, removeSearchHistory, clearSearchHistory, getSeriesFavorites, toggleSeriesFavorite, getExternalProgress, getChannelFavorites, toggleChannelFavorite } from '@/lib/user-data';
 import { useVoiceSearch } from '@/hooks/use-voice-search';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 import lettersLogo from '@assets/super-tv-letters-logo.png';
 import channelDefaultLogo from '@assets/image_1778868245666.png';
 import { usePwaInstall } from '@/hooks/use-pwa-install';

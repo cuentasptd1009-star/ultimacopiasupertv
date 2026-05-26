@@ -30,7 +30,7 @@ import {
   Activity, Signal, AlertTriangle, BarChart2, MonitorPlay, RefreshCw, Tv2, ChevronDown, ChevronRight, Globe, Link2, ListVideo, Layers, Youtube, Play
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
