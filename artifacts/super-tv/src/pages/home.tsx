@@ -50,7 +50,7 @@ import { getFavorites, getAllProgress, getHistory, toggleFavorite, getAllSeriesP
 import { useVoiceSearch } from '@/hooks/use-voice-search';
 import logo from '@assets/logo_supertv.png';
 import lettersLogo from '@assets/super-tv-letters-logo.png';
-import channelDefaultLogo from '@assets/image_1778868245666.png';
+import channelDefaultLogo from '@assets/logo_supertv.png';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 import { ContentRow, isChannel } from '@/components/ContentRow';
 import type { ContentItem, MovieItem } from '@/components/ContentRow';
