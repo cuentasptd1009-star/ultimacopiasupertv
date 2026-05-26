@@ -78,6 +78,7 @@ export default function VodPlayerPage() {
   const retryCountRef = useRef(0);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showNextEpRef = useRef(false);
+  const autoFullscreenDoneRef = useRef(false);
 
   const [currentUrl, setCurrentUrl] = useState(rawUrl);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -148,7 +149,22 @@ export default function VodPlayerPage() {
     setIsBuffering(false);
     let destroyed = false;
 
-    const onPlay = () => { setIsPlaying(true); setIsLoading(false); };
+    const onPlay = () => {
+      setIsPlaying(true);
+      setIsLoading(false);
+      // Auto-fullscreen on first play to hide browser chrome
+      if (!autoFullscreenDoneRef.current) {
+        autoFullscreenDoneRef.current = true;
+        const el = containerRef.current as any;
+        const vid = video as any;
+        const isFull = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+        if (!isFull) {
+          const req = el?.requestFullscreen || el?.webkitRequestFullscreen;
+          if (req) { try { req.call(el); } catch {} }
+          else if (vid?.webkitEnterFullscreen) { try { vid.webkitEnterFullscreen(); } catch {} }
+        }
+      }
+    };
     const onPause = () => setIsPlaying(false);
     const onWaiting = () => setIsBuffering(true);
     const onCanPlay = () => { setIsBuffering(false); setIsLoading(false); };
@@ -524,7 +540,7 @@ export default function VodPlayerPage() {
 
   if (format === 'youtube') {
     const ytId = extractYouTubeId(currentUrl);
-    if (!ytId) return <div className="flex items-center justify-center h-screen bg-black text-white/60 text-sm">URL de YouTube inválida</div>;
+    if (!ytId) return <div className="flex items-center justify-center h-[100dvh] bg-black text-white/60 text-sm">URL de YouTube inválida</div>;
     // Compute effective startFrom: URL param → saved episode/movie progress → 0
     let ytStartFrom: number | undefined;
     if (startFrom !== null) {
@@ -559,7 +575,7 @@ export default function VodPlayerPage() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-screen bg-black overflow-hidden flex items-center justify-center select-none"
+      className="relative w-full h-[100dvh] bg-black overflow-hidden flex items-center justify-center select-none"
       onMouseMove={showControlsTemporarily}
       onTouchStart={showControlsTemporarily}
       onClick={e => {

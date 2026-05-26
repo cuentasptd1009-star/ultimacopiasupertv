@@ -162,6 +162,7 @@ export default function PlayerPage() {
   // constant re-renders (timeupdate fires ~4x/sec) while keeping the UI smooth
   const lastDisplayUpdateRef = useRef(0);
   const isLiveRef = useRef(type === 'channel');
+  const autoFullscreenDoneRef = useRef(false);
 
   const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
@@ -170,7 +171,22 @@ export default function PlayerPage() {
   }, []);
 
   const setupVideoEvents = useCallback((video: HTMLVideoElement) => {
-    const onPlay = () => { setIsPlaying(true); setIsLoading(false); };
+    const onPlay = () => {
+      setIsPlaying(true);
+      setIsLoading(false);
+      // Auto-fullscreen on first play to hide browser chrome
+      if (!autoFullscreenDoneRef.current) {
+        autoFullscreenDoneRef.current = true;
+        const el = containerRef.current as any;
+        const vid = video as any;
+        const isFull = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+        if (!isFull) {
+          const req = el?.requestFullscreen || el?.webkitRequestFullscreen;
+          if (req) { try { req.call(el); } catch {} }
+          else if (vid?.webkitEnterFullscreen) { try { vid.webkitEnterFullscreen(); } catch {} }
+        }
+      }
+    };
     const onPause = () => setIsPlaying(false);
     const onWaiting = () => setIsBuffering(true);
     const onCanPlay = () => { setIsBuffering(false); setIsLoading(false); };
@@ -503,26 +519,38 @@ export default function PlayerPage() {
 
   const toggleFullscreen = useCallback(() => {
     const el = containerRef.current as any;
+    const vid = videoRef.current as any;
     if (!el) return;
-    if (!document.fullscreenElement) {
+    const isFull = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+    if (!isFull) {
       const req = el.requestFullscreen || el.webkitRequestFullscreen;
-      if (req) { try { req.call(el); } catch {} }
-      else setIsFullscreen(f => !f); // CSS-only fallback for iOS
+      if (req) { try { req.call(el); return; } catch {} }
+      // iOS Safari: fullscreen on the video element itself
+      if (vid?.webkitEnterFullscreen) { try { vid.webkitEnterFullscreen(); return; } catch {} }
+      setIsFullscreen(true);
     } else {
       const exit = (document as any).exitFullscreen || (document as any).webkitExitFullscreen;
-      if (exit) { try { exit.call(document); } catch {} }
-      else setIsFullscreen(false);
+      if (exit) { try { exit.call(document); return; } catch {} }
+      if (vid?.webkitExitFullscreen) { try { vid.webkitExitFullscreen(); return; } catch {} }
+      setIsFullscreen(false);
     }
     showControlsTemporarily();
   }, [showControlsTemporarily]);
 
   useEffect(() => {
-    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const vid = videoRef.current as any;
+    const onFsChange = () => setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
+    const onIosEnter = () => setIsFullscreen(true);
+    const onIosExit = () => setIsFullscreen(false);
     document.addEventListener('fullscreenchange', onFsChange);
     document.addEventListener('webkitfullscreenchange', onFsChange);
+    vid?.addEventListener('webkitbeginfullscreen', onIosEnter);
+    vid?.addEventListener('webkitendfullscreen', onIosExit);
     return () => {
       document.removeEventListener('fullscreenchange', onFsChange);
       document.removeEventListener('webkitfullscreenchange', onFsChange);
+      vid?.removeEventListener('webkitbeginfullscreen', onIosEnter);
+      vid?.removeEventListener('webkitendfullscreen', onIosExit);
     };
   }, []);
 
@@ -691,7 +719,7 @@ export default function PlayerPage() {
 
   if (isExpired) {
     return (
-      <div className="w-full h-screen bg-black flex flex-col items-center justify-center gap-6 text-center px-6">
+      <div className="w-full h-[100dvh] bg-black flex flex-col items-center justify-center gap-6 text-center px-6">
         <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center">
           <Lock className="w-10 h-10 text-destructive" />
         </div>
@@ -708,7 +736,7 @@ export default function PlayerPage() {
 
   if (currentFormat === 'youtube' || detectFormat(currentUrl) === 'youtube') {
     const ytId = extractYouTubeId(currentUrl);
-    if (!ytId) return <div className="flex items-center justify-center h-screen bg-black text-white/60 text-sm">URL de YouTube inválida</div>;
+    if (!ytId) return <div className="flex items-center justify-center h-[100dvh] bg-black text-white/60 text-sm">URL de YouTube inválida</div>;
 
     const handleHideFromCatalog = movieId ? async () => {
       try {
@@ -748,7 +776,7 @@ export default function PlayerPage() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-screen bg-black overflow-hidden flex items-center justify-center select-none"
+      className="relative w-full h-[100dvh] bg-black overflow-hidden flex items-center justify-center select-none"
       onMouseMove={showControlsTemporarily}
       onTouchStart={showControlsTemporarily}
       onClick={e => { if (e.target === containerRef.current || e.target === videoRef.current) togglePlay(); showControlsTemporarily(); }}
