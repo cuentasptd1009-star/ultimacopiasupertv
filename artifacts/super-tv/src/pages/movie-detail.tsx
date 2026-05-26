@@ -540,9 +540,9 @@ export default function MovieDetail() {
                 </button>
                 <button
                   onClick={handleToggleFav}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 border backdrop-blur-sm ${isFav ? 'bg-red-500/20 border-red-500/40 text-red-300 hover:bg-red-500/30' : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/20'} ${mvZone === 'buttons' && btnIndex === 2 ? 'ring-4 ring-white scale-105' : ''}`}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 border backdrop-blur-sm ${isFav ? 'bg-orange-500/20 border-orange-500/40 text-orange-300 hover:bg-orange-500/30' : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/20'} ${mvZone === 'buttons' && btnIndex === 2 ? 'ring-4 ring-white scale-105' : ''}`}
                 >
-                  <Heart className={`w-4 h-4 ${isFav ? 'fill-red-400 text-red-400' : ''}`} />
+                  <Heart className={`w-4 h-4 ${isFav ? 'fill-orange-400 text-orange-400' : ''}`} />
                   {isFav ? 'En favoritos' : 'Favorito'}
                 </button>
                 <button
@@ -564,9 +564,9 @@ export default function MovieDetail() {
                 </button>
                 <button
                   onClick={handleToggleFav}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 border backdrop-blur-sm ${isFav ? 'bg-red-500/20 border-red-500/40 text-red-300 hover:bg-red-500/30' : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/20'} ${mvZone === 'buttons' && btnIndex === 1 ? 'ring-4 ring-white scale-105' : ''}`}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95 border backdrop-blur-sm ${isFav ? 'bg-orange-500/20 border-orange-500/40 text-orange-300 hover:bg-orange-500/30' : 'bg-white/10 border-white/15 text-white/70 hover:text-white hover:bg-white/20'} ${mvZone === 'buttons' && btnIndex === 1 ? 'ring-4 ring-white scale-105' : ''}`}
                 >
-                  <Heart className={`w-4 h-4 ${isFav ? 'fill-red-400 text-red-400' : ''}`} />
+                  <Heart className={`w-4 h-4 ${isFav ? 'fill-orange-400 text-orange-400' : ''}`} />
                   {isFav ? 'En favoritos' : 'Favorito'}
                 </button>
                 <button
