@@ -428,6 +428,13 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const SEARCH_HINTS = ['películas', 'acción', 'terror', 'animados', 'comedia', 'drama', 'series', 'documentales', 'romance', 'suspenso', 'ciencia ficción'];
+  const [searchHintIdx, setSearchHintIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSearchHintIdx(i => (i + 1) % SEARCH_HINTS.length), 2500);
+    return () => clearInterval(id);
+  }, []);
+  const searchPlaceholder = isListening ? 'Escuchando...' : `Buscar... ${SEARCH_HINTS[searchHintIdx]}`;
   const [zone, setZone] = useState<NavZone>('rows');
   const [inputMode, setInputMode] = useState<'mouse' | 'keyboard'>('mouse');
   const inputModeRef = useRef<'mouse' | 'keyboard'>('mouse');
@@ -1307,7 +1314,7 @@ export default function Home() {
               onChange={e => { setSearchQuery(e.target.value); setSearchInput(e.target.value); setRowIndex(0); setColIndex(0); }}
               onFocus={() => { setZone('sidebar'); const idx = sidebarItems.findIndex(it => it.kind === 'search'); if (idx >= 0) setSidebarIdx(idx); }}
               onKeyDown={e => { if (e.key === 'Enter' && searchQuery.trim()) { e.preventDefault(); e.stopPropagation(); setSearchInput(''); setSidebarMouseOpen(false); setZone('rows'); setRowIndex(0); setColIndex(0); (e.target as HTMLInputElement).blur(); } }}
-              placeholder={isListening ? 'Escuchando...' : 'Buscar...'}
+              placeholder={searchPlaceholder}
               className={`w-full bg-white/7 border border-white/10 rounded-xl pl-9 ${voiceSupported ? 'pr-9' : 'pr-4'} py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors ${zone === 'sidebar' && sidebarItems[sidebarIdx]?.kind === 'search' ? 'border-white/25 bg-white/10' : ''} ${isListening ? 'border-red-500/50' : ''}`}
             />
             {(searchQuery || searchInput)
@@ -1382,7 +1389,7 @@ export default function Home() {
             <input
               value={searchInput}
               onChange={e => { setSearchQuery(e.target.value); setSearchInput(e.target.value); setRowIndex(0); setColIndex(0); }}
-              placeholder="Buscar..."
+              placeholder={searchPlaceholder}
               className="w-full bg-white/7 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-white/20"
             />
           </div>
