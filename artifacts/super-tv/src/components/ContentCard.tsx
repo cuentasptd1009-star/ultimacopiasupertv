@@ -1,5 +1,5 @@
-import { memo, useState } from 'react';
-import { Play, Heart, Film } from 'lucide-react';
+import { memo, useState, useEffect, useRef } from 'react';
+import { Play, Heart, Film, Volume2, VolumeX } from 'lucide-react';
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
 
@@ -43,6 +43,7 @@ interface ContentCardProps {
   badge?: string | null;
   duration?: string | null;
   portrait?: boolean;
+  previewUrl?: string | null;
   onClick: () => void;
   onFavoriteToggle?: (e: React.MouseEvent) => void;
   onHover?: () => void;
@@ -61,6 +62,7 @@ export const ContentCard = memo(function ContentCard({
   badge,
   duration,
   portrait = false,
+  previewUrl,
   onClick,
   onFavoriteToggle,
   onHover,
@@ -68,6 +70,43 @@ export const ContentCard = memo(function ContentCard({
   cardRef,
 }: ContentCardProps) {
   const [imgError, setImgError] = useState(false);
+  const [previewActive, setPreviewActive] = useState(false);
+  const [previewMuted, setPreviewMuted] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canPreviewRef = useRef(false);
+
+  // Only preview direct video files — not YouTube
+  canPreviewRef.current = !!(
+    previewUrl &&
+    !previewUrl.includes('youtube.com') &&
+    !previewUrl.includes('youtu.be')
+  );
+
+  const startTimer = () => {
+    if (!canPreviewRef.current) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setPreviewActive(true), 1500);
+  };
+
+  const stopPreview = () => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    setPreviewActive(false);
+    setPreviewMuted(true);
+  };
+
+  // TV remote: react to isFocused prop
+  useEffect(() => {
+    if (isFocused) {
+      startTimer();
+    } else {
+      stopPreview();
+    }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFocused]);
+
+  const handleMouseEnter = () => { startTimer(); onHover?.(); };
+  const handleMouseLeave = () => { stopPreview(); onHoverEnd?.(); };
 
   const widthClass = portrait
     ? 'w-28 sm:w-32 md:w-36'
@@ -84,8 +123,8 @@ export const ContentCard = memo(function ContentCard({
         isFocused ? 'scale-105 z-20' : 'hover:scale-[1.04] z-10'
       }`}
       onClick={onClick}
-      onMouseEnter={onHover}
-      onMouseLeave={onHoverEnd}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div
         className={`${portrait ? 'aspect-[2/3]' : 'aspect-video'} rounded-lg overflow-hidden relative shadow-md transition-[box-shadow,ring] duration-200 ${
@@ -115,7 +154,6 @@ export const ContentCard = memo(function ContentCard({
             />
           </div>
         ) : (
-          /* Elegant gradient fallback for movies/archive */
           <div className={`w-full h-full bg-gradient-to-br ${grad} flex flex-col items-center justify-center gap-2 px-3`}>
             <Film className="w-6 h-6 text-white/20 flex-shrink-0" />
             <p className="text-white/70 text-[10px] font-semibold text-center leading-snug line-clamp-3 drop-shadow">
@@ -124,8 +162,37 @@ export const ContentCard = memo(function ContentCard({
           </div>
         )}
 
-        {/* Overlays */}
-        {portrait ? (
+        {/* Netflix-style video preview overlay */}
+        {previewActive && canPreviewRef.current && previewUrl && (
+          <div className="absolute inset-0 z-10 animate-[fadeIn_0.3s_ease-in]">
+            <video
+              src={previewUrl}
+              muted={previewMuted}
+              autoPlay
+              loop
+              playsInline
+              className="w-full h-full object-cover"
+              onError={() => setPreviewActive(false)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+            <button
+              className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/70 border border-white/20 z-20 hover:bg-black/90 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setPreviewMuted(m => !m); }}
+              title={previewMuted ? 'Activar sonido' : 'Silenciar'}
+            >
+              {previewMuted
+                ? <VolumeX className="w-3 h-3 text-white" />
+                : <Volume2 className="w-3 h-3 text-white" />
+              }
+            </button>
+            <div className="absolute bottom-2 left-2 right-8 pointer-events-none">
+              <p className="text-white text-[11px] font-semibold leading-tight line-clamp-2 drop-shadow-lg">{title}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Overlays (hidden when preview is active) */}
+        {!previewActive && (portrait ? (
           <>
             {!showFallback && (
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
@@ -172,7 +239,7 @@ export const ContentCard = memo(function ContentCard({
               </p>
             </div>
           </div>
-        )}
+        ))}
 
         {badge && (
           <span className="absolute top-1.5 left-1.5 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide z-10 shadow-lg">

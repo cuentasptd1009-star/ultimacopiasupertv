@@ -2,7 +2,7 @@ import { useLocation, useRoute } from 'wouter';
 import { normalizeKey } from '@/lib/tv-remote';
 import { useListMovies, getListMoviesQueryKey, useGetMe, getGetMeQueryKey } from '@workspace/api-client-react';
 import { apiBase } from '@/lib/api';
-import { Play, ArrowLeft, Film, Tag, Search, X, Lock, Heart, Info } from 'lucide-react';
+import { Play, ArrowLeft, Film, Tag, Search, X, Lock, Heart, Info, Volume2, VolumeX } from 'lucide-react';
 import { getProgress, toggleFavorite, getFavorites, toggleExternalFavorite, isExternalFavorite, addExternalHistory, type ExternalItem } from '@/lib/user-data';
 import { clearTokens, getToken } from '@/lib/auth';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
@@ -32,6 +32,125 @@ type MvZone = 'buttons' | 'catpills' | 'search' | 'grid';
 
 type YtResult = { videoId: string; title: string; thumbnail: string; channel: string; year?: string; duration: string };
 type ArchiveResult = { identifier: string; title: string; year?: string; creator?: string; thumbnail: string };
+
+interface GridMovie {
+  id: number;
+  title: string;
+  poster?: string | null;
+  filePath?: string | null;
+  category?: string | null;
+  year?: number | null;
+  genre?: string | null;
+}
+
+function MovieGridCard({
+  mv,
+  isFocused,
+  cardRef,
+  onClick,
+}: {
+  mv: GridMovie;
+  isFocused: boolean;
+  cardRef?: (el: HTMLDivElement | null) => void;
+  onClick: () => void;
+}) {
+  const [previewActive, setPreviewActive] = useState(false);
+  const [previewMuted, setPreviewMuted] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const canPreview = !!(
+    mv.filePath &&
+    !mv.filePath.includes('youtube.com') &&
+    !mv.filePath.includes('youtu.be')
+  );
+
+  const startTimer = () => {
+    if (!canPreview) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setPreviewActive(true), 1500);
+  };
+
+  const stopPreview = () => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    setPreviewActive(false);
+    setPreviewMuted(true);
+  };
+
+  useEffect(() => {
+    if (isFocused) startTimer();
+    else stopPreview();
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFocused]);
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseEnter={startTimer}
+      onMouseLeave={stopPreview}
+      onClick={onClick}
+      className={`group flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${isFocused ? 'ring-4 ring-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.5)] z-10' : 'hover:scale-105 hover:ring-1 hover:ring-white/20'}`}
+    >
+      <div className="aspect-video bg-white/5 relative flex items-center justify-center overflow-hidden rounded-xl">
+        {mv.poster ? (
+          <img
+            src={mv.poster}
+            alt={mv.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        ) : (
+          <Film className="w-8 h-8 text-white/15" />
+        )}
+
+        {/* Preview video overlay */}
+        {previewActive && canPreview && mv.filePath && (
+          <div className="absolute inset-0 z-10 animate-[fadeIn_0.3s_ease-in]">
+            <video
+              src={mv.filePath}
+              muted={previewMuted}
+              autoPlay
+              loop
+              playsInline
+              className="w-full h-full object-cover"
+              onError={() => setPreviewActive(false)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+            <button
+              className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/70 border border-white/20 z-20 hover:bg-black/90 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setPreviewMuted(m => !m); }}
+            >
+              {previewMuted
+                ? <VolumeX className="w-3 h-3 text-white" />
+                : <Volume2 className="w-3 h-3 text-white" />
+              }
+            </button>
+          </div>
+        )}
+
+        {/* Play overlay (hidden while preview plays) */}
+        {!previewActive && (
+          <div className={`absolute inset-0 bg-black/50 flex items-center justify-center transition-opacity ${isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+            <div className="p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/20">
+              <Play className="w-5 h-5 text-white fill-white" />
+            </div>
+          </div>
+        )}
+
+        {mv.category && (
+          <span className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[9px] rounded-md text-white/70 border border-white/10 z-20">{mv.category}</span>
+        )}
+        {mv.year && (
+          <span className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[9px] rounded-md text-white/70 z-20">{mv.year}</span>
+        )}
+      </div>
+      <div className="pt-2 px-0.5 pb-1">
+        <h3 className={`font-medium text-xs truncate leading-tight transition-colors ${isFocused ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>{mv.title}</h3>
+        {mv.genre && <p className="text-[10px] text-white/35 mt-0.5 truncate">{mv.genre}</p>}
+      </div>
+    </div>
+  );
+}
 
 export default function MovieDetail() {
   const [, setLocation] = useLocation();
@@ -659,36 +778,13 @@ export default function MovieDetail() {
                     const col = idx % cols;
                     const isFocused = mvZone === 'grid' && gridRow === row && gridCol === col;
                     return (
-                      <div
+                      <MovieGridCard
                         key={mv.id}
-                        ref={isFocused ? (el) => { focusedGridRef.current = el; } : undefined}
+                        mv={mv as GridMovie}
+                        isFocused={isFocused}
+                        cardRef={isFocused ? (el) => { focusedGridRef.current = el; } : undefined}
                         onClick={() => setLocation(`/pelicula/${mv.id}`)}
-                        className={`group flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${isFocused ? 'ring-4 ring-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.5)] z-10' : 'hover:scale-105 hover:ring-1 hover:ring-white/20'}`}
-                      >
-                        <div className="aspect-video bg-white/5 relative flex items-center justify-center overflow-hidden rounded-xl">
-                          {mv.poster ? (
-                            <img src={mv.poster} alt={mv.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          ) : (
-                            <Film className="w-8 h-8 text-white/15" />
-                          )}
-                          <div className={`absolute inset-0 bg-black/50 flex items-center justify-center transition-opacity ${isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                            <div className="p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/20">
-                              <Play className="w-5 h-5 text-white fill-white" />
-                            </div>
-                          </div>
-                          {mv.category && (
-                            <span className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[9px] rounded-md text-white/70 border border-white/10">{mv.category}</span>
-                          )}
-                          {(mv as any).year && (
-                            <span className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[9px] rounded-md text-white/70">{(mv as any).year}</span>
-                          )}
-                        </div>
-                        <div className="pt-2 px-0.5 pb-1">
-                          <h3 className={`font-medium text-xs truncate leading-tight transition-colors ${isFocused ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>{mv.title}</h3>
-                          {(mv as any).genre && <p className="text-[10px] text-white/35 mt-0.5 truncate">{(mv as any).genre}</p>}
-                        </div>
-                      </div>
+                      />
                     );
                   })}
                 </div>

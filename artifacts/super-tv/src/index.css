@@ -142,3 +142,8 @@
 .nav-item-focused {
   @apply ring-2 ring-primary border-primary transform scale-105 transition-all duration-200 z-10 shadow-[0_0_15px_rgba(220,38,38,0.5)];
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

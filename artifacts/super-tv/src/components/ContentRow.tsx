@@ -135,6 +135,7 @@ export const ContentRow = memo(function ContentRow({
               progress={prog ?? null}
               isFavorite={fav}
               badge={badge}
+              previewUrl={!ch ? (item as MovieItem).filePath ?? undefined : undefined}
               onClick={() => onItemClick(item)}
               onFavoriteToggle={
                 !ch && onFavoriteToggle
