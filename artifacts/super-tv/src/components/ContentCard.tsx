@@ -57,6 +57,7 @@ interface ContentCardProps {
   onHover?: () => void;
   onHoverEnd?: () => void;
   cardRef?: (el: HTMLDivElement | null) => void;
+  disableHover?: boolean;
 }
 
 export const ContentCard = memo(function ContentCard({
@@ -76,6 +77,7 @@ export const ContentCard = memo(function ContentCard({
   onHover,
   onHoverEnd,
   cardRef,
+  disableHover = false,
 }: ContentCardProps) {
   const [imgError, setImgError] = useState(false);
   const [previewActive, setPreviewActive] = useState(false);
@@ -138,12 +140,14 @@ export const ContentCard = memo(function ContentCard({
   }, [isFocused]);
 
   const handleMouseEnter = () => {
+    if (disableHover) return;
     isHoveringRef.current = true;
     startTimer();
     onHover?.();
   };
 
   const handleMouseLeave = () => {
+    if (disableHover) return;
     isHoveringRef.current = false;
     if (!previewActive) {
       // Preview not yet shown — cancel timer

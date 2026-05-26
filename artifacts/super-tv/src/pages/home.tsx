@@ -427,7 +427,8 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [zone, setZone] = useState<NavZone>('rows');
-  const [keyboardActive, setKeyboardActive] = useState(false);
+  const [inputMode, setInputMode] = useState<'mouse' | 'keyboard'>('mouse');
+  const inputModeRef = useRef<'mouse' | 'keyboard'>('mouse');
 
   type YtResult = { videoId: string; title: string; thumbnail: string; channel: string; year?: string; duration: string };
   type ArchiveResult = { identifier: string; title: string; year?: string; creator?: string; thumbnail: string };
@@ -911,7 +912,7 @@ export default function Home() {
 
       // Blur any focused button/link so arrow keys always reach our handler
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
-        setKeyboardActive(true);
+        if (inputModeRef.current !== 'keyboard') { inputModeRef.current = 'keyboard'; setInputMode('keyboard'); }
         if (activeEl && activeEl !== document.body && (activeEl as HTMLElement).blur) {
           (activeEl as HTMLElement).blur();
         }
@@ -1160,7 +1161,7 @@ export default function Home() {
   }, [zone, sidebarIdx, sidebarItems, rowIndex, colIndex, heroBtnIndex, heroBannerIdx, activeRows, seriesRows, activeTab, playItem, playSeriesItem, actionButtons, showProfile, showHint, showShortcutHint, isListening, startListening, stopListening, showHero, hoveredHero, heroBannerItems, openKeyboard, searchQuery, openProfile, catFilterIdx, channelRows, selectedChannelCategory]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="min-h-screen bg-background text-white flex select-none">
+    <div className="min-h-screen bg-background text-white flex select-none" onMouseMove={() => { if (inputModeRef.current !== 'mouse') { inputModeRef.current = 'mouse'; setInputMode('mouse'); } }}>
 
       {/* ── EXPIRED OVERLAY ── */}
       {isExpired && showExpiredOverlay && (
@@ -1304,7 +1305,7 @@ export default function Home() {
           {navItems.map((item, i) => {
             const Icon = item.icon;
             const isActive = activeTab === item.key;
-            const isFocused = keyboardActive && zone === 'sidebar' && sidebarItems[sidebarIdx]?.kind === 'tab' && (sidebarItems[sidebarIdx] as { kind: 'tab'; tabIdx: number; key: TabKey }).tabIdx === i;
+            const isFocused = inputMode === 'keyboard' && zone === 'sidebar' && sidebarItems[sidebarIdx]?.kind === 'tab' && (sidebarItems[sidebarIdx] as { kind: 'tab'; tabIdx: number; key: TabKey }).tabIdx === i;
             return (
               <button
                 key={item.key}
@@ -1329,7 +1330,7 @@ export default function Home() {
           {actionButtons.filter(b => b.key !== 'profile').map((btn) => {
             const Icon = btn.icon;
             const isLogout = btn.key === 'logout';
-            const isFocused = keyboardActive && zone === 'sidebar' && sidebarItems[sidebarIdx]?.kind === 'action' && (sidebarItems[sidebarIdx] as { kind: 'action'; key: string }).key === btn.key;
+            const isFocused = inputMode === 'keyboard' && zone === 'sidebar' && sidebarItems[sidebarIdx]?.kind === 'action' && (sidebarItems[sidebarIdx] as { kind: 'action'; key: string }).key === btn.key;
             return (
               <button key={btn.key} onClick={btn.action} className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isLogout ? 'text-white/35 hover:text-red-400 hover:bg-red-500/10' : 'text-white/45 hover:text-white hover:bg-white/7'} ${isFocused ? (isLogout ? 'ring-2 ring-red-400/60 text-red-400 bg-red-500/10' : 'ring-2 ring-primary/60 text-white bg-white/10') : ''}`}>
                 <Icon className="w-4 h-4 flex-shrink-0" />
@@ -1377,7 +1378,7 @@ export default function Home() {
               overrideItem={hoveredHero}
               onPlay={playHeroBannerItem}
               onInfo={item => item.type === 'series' ? setLocation(`/serie/${item.id}`) : setLocation(`/pelicula/${item.id}`)}
-              focusedBtnIndex={keyboardActive && zone === 'hero' ? heroBtnIndex : null}
+              focusedBtnIndex={inputMode === 'keyboard' && zone === 'hero' ? heroBtnIndex : null}
               currentIndex={heroBannerIdx}
               onCurrentChange={setHeroBannerIdx}
             />
@@ -1455,7 +1456,8 @@ export default function Home() {
                       title={ch.name}
                       image={ch.logo ?? null}
                       isChannel
-                      isFocused={keyboardActive && zone === 'rows' && rowIndex === 0 && colIndex === cIdx}
+                      isFocused={inputMode === 'keyboard' && zone === 'rows' && rowIndex === 0 && colIndex === cIdx}
+                        disableHover={inputMode === 'keyboard'}
                       onClick={() => playItem(ch as ContentItem)}
                     />
                   ))}
@@ -1481,9 +1483,9 @@ export default function Home() {
                           key={s.id}
                           series={s}
                           onClick={() => playSeriesItem(s)}
-                          focused={keyboardActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
-                          onHover={() => setHoveredHero({ id: s.id, title: s.title, description: s.description, banner: s.banner, poster: s.poster, category: s.category, genre: s.genre, year: s.year, type: 'series' })}
-                          onHoverEnd={() => setHoveredHero(null)}
+                          focused={inputMode === 'keyboard' && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
+                          onHover={inputMode !== 'keyboard' ? () => setHoveredHero({ id: s.id, title: s.title, description: s.description, banner: s.banner, poster: s.poster, category: s.category, genre: s.genre, year: s.year, type: 'series' }) : undefined}
+                          onHoverEnd={inputMode !== 'keyboard' ? () => setHoveredHero(null) : undefined}
                         />
                       ))}
                     </div>
@@ -1539,7 +1541,8 @@ export default function Home() {
                     emoji="🎬"
                     items={favoriteMovies as ContentItem[]}
                     focusedIndex={colIndex}
-                    isFocusedRow={keyboardActive && zone === 'rows' && rowIndex === 0}
+                    isFocusedRow={inputMode === 'keyboard' && zone === 'rows' && rowIndex === 0}
+                    disableHover={inputMode === 'keyboard'}
                     onItemClick={playItem}
                     onFavoriteToggle={doToggleFav}
                     progressMap={progressMap}
@@ -1674,7 +1677,7 @@ export default function Home() {
                             <ContinueWatchingCard
                               key={`${item.type}-${item.id}`}
                               item={item}
-                              focused={keyboardActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
+                              focused={inputMode === 'keyboard' && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
                               onClick={() => {
                                 if (isExpired) { setShowExpiredOverlay(true); return; }
                                 if (item.type === 'external' && item.externalItem) {
@@ -1705,7 +1708,7 @@ export default function Home() {
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                           {row.items.map((item, cIdx) => {
                             const ext = item as unknown as { id: number; title: string; poster?: string; _ytDuration?: string };
-                            const isFocused = keyboardActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx;
+                            const isFocused = inputMode === 'keyboard' && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx;
                             return (
                               <ContentCard
                                 key={item.id}
@@ -1730,7 +1733,7 @@ export default function Home() {
                       emoji={row.emoji}
                       items={row.items}
                       focusedIndex={colIndex}
-                      isFocusedRow={keyboardActive && zone === 'rows' && rowIndex === rIdx}
+                      isFocusedRow={inputMode === 'keyboard' && zone === 'rows' && rowIndex === rIdx}
                       onItemClick={playItem}
                       onFavoriteToggle={doToggleFav}
                       progressMap={progressMap}
@@ -1739,6 +1742,7 @@ export default function Home() {
                       showProgress={row.showProgress}
                       portrait
                       onHoverItem={(item) => setHoveredHero(item ? { ...item, type: 'movie' } : null)}
+                      disableHover={inputMode === 'keyboard'}
                     />
                   );
                 })}

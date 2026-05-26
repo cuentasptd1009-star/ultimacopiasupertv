@@ -45,6 +45,7 @@ interface ContentRowProps {
   sectionRef?: (el: HTMLElement | null) => void;
   onHoverItem?: (item: HeroBannerItem | null) => void;
   portrait?: boolean;
+  disableHover?: boolean;
 }
 
 export const ContentRow = memo(function ContentRow({
@@ -62,6 +63,7 @@ export const ContentRow = memo(function ContentRow({
   sectionRef,
   onHoverItem,
   portrait = false,
+  disableHover = false,
 }: ContentRowProps) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -149,6 +151,7 @@ export const ContentRow = memo(function ContentRow({
               }
               onHover={heroItem && onHoverItem ? () => onHoverItem(heroItem) : undefined}
               onHoverEnd={onHoverItem ? () => onHoverItem(null) : undefined}
+              disableHover={disableHover}
             />
           );
         })}
