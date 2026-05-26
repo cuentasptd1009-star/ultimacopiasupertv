@@ -91,8 +91,10 @@ export const ContentRow = memo(function ContentRow({
       </div>
 
       <div
-        className="flex gap-2.5 sm:gap-3 overflow-x-auto pb-3 scroll-smooth"
+        className="flex gap-2.5 sm:gap-3 py-4 scroll-smooth"
         style={{
+          overflowX: 'auto',
+          overflowY: 'clip',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           paddingLeft: '4px',

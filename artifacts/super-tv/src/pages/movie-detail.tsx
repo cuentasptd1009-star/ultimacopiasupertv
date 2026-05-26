@@ -89,7 +89,13 @@ function MovieGridCard({
       onMouseEnter={startTimer}
       onMouseLeave={stopPreview}
       onClick={onClick}
-      className={`group flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${isFocused ? 'ring-4 ring-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.5)] z-10' : 'hover:scale-105 hover:ring-1 hover:ring-white/20'}`}
+      className={`group flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${
+        previewActive
+          ? 'scale-[1.22] z-30 shadow-[0_12px_48px_rgba(0,0,0,0.85)]'
+          : isFocused
+            ? 'ring-4 ring-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.5)] z-10'
+            : 'hover:scale-105 hover:ring-1 hover:ring-white/20'
+      }`}
     >
       <div className="aspect-video bg-white/5 relative flex items-center justify-center overflow-hidden rounded-xl">
         {mv.poster ? (

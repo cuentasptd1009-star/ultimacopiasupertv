@@ -118,8 +118,12 @@ export const ContentCard = memo(function ContentCard({
     <div
       ref={cardRef}
       data-tv-focused={isFocused ? 'true' : undefined}
-      className={`flex-shrink-0 ${widthClass} group cursor-pointer select-none transition-transform duration-200 ease-out ${
-        isFocused ? 'scale-105 z-20' : 'hover:scale-[1.04] z-10'
+      className={`flex-shrink-0 ${widthClass} group cursor-pointer select-none transition-all duration-300 ease-out ${
+        previewActive
+          ? 'scale-[1.22] z-30 shadow-[0_12px_48px_rgba(0,0,0,0.85)]'
+          : isFocused
+            ? 'scale-105 z-20'
+            : 'hover:scale-[1.04] z-10'
       }`}
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
