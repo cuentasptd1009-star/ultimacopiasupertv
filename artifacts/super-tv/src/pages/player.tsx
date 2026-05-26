@@ -163,6 +163,7 @@ export default function PlayerPage() {
   const lastDisplayUpdateRef = useRef(0);
   const isLiveRef = useRef(type === 'channel');
   const autoFullscreenDoneRef = useRef(false);
+  const userMutedRef = useRef(false);
 
   const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
@@ -174,6 +175,10 @@ export default function PlayerPage() {
     const onPlay = () => {
       setIsPlaying(true);
       setIsLoading(false);
+      // Auto-unmute: video starts muted to bypass autoplay policy, unmute on first play
+      if (!userMutedRef.current && video.muted) {
+        video.muted = false;
+      }
       // Auto-fullscreen on first play to hide browser chrome
       if (!autoFullscreenDoneRef.current) {
         autoFullscreenDoneRef.current = true;
@@ -490,6 +495,7 @@ export default function PlayerPage() {
   const toggleMute = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
+    userMutedRef.current = !mutedRef.current;
     v.muted = !mutedRef.current;
     showControlsTemporarily();
   }, [showControlsTemporarily]);
@@ -785,6 +791,8 @@ export default function PlayerPage() {
         ref={videoRef}
         className={`w-full h-full object-contain ${error ? 'hidden' : ''}`}
         style={{ willChange: 'transform', contain: 'strict' }}
+        autoPlay
+        muted
         playsInline
         webkit-playsinline=""
         x-webkit-airplay="allow"

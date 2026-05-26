@@ -79,6 +79,7 @@ export default function VodPlayerPage() {
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showNextEpRef = useRef(false);
   const autoFullscreenDoneRef = useRef(false);
+  const userMutedRef = useRef(false);
 
   const [currentUrl, setCurrentUrl] = useState(rawUrl);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -152,6 +153,10 @@ export default function VodPlayerPage() {
     const onPlay = () => {
       setIsPlaying(true);
       setIsLoading(false);
+      // Auto-unmute: video starts muted to bypass autoplay policy, unmute on first play
+      if (!userMutedRef.current && video.muted) {
+        video.muted = false;
+      }
       // Auto-fullscreen on first play to hide browser chrome
       if (!autoFullscreenDoneRef.current) {
         autoFullscreenDoneRef.current = true;
@@ -350,6 +355,7 @@ export default function VodPlayerPage() {
   const toggleMute = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
+    userMutedRef.current = !v.muted;
     v.muted = !v.muted;
     showControlsTemporarily();
   }, [showControlsTemporarily]);
@@ -585,6 +591,8 @@ export default function VodPlayerPage() {
       <video
         ref={videoRef}
         className={`w-full h-full object-cover ${error ? 'hidden' : ''}`}
+        autoPlay
+        muted
         playsInline
         preload="auto"
       />
