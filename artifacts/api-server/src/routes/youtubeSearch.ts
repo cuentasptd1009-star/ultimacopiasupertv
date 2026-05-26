@@ -8,6 +8,138 @@ const router = Router();
 
 const YT_API = "https://www.googleapis.com/youtube/v3";
 
+// ── YouTube Innertube (no API key required) ───────────────────────────────────
+const INNERTUBE_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
+const INNERTUBE_CONTEXT = {
+  client: { clientName: "WEB", clientVersion: "2.20240101", hl: "es", gl: "MX" },
+};
+
+function extractVideosFromSearch(data: any): any[] {
+  const contents: any[] =
+    data?.contents?.twoColumnSearchResultsRenderer?.primaryContents
+      ?.sectionListRenderer?.contents ??
+    data?.onResponseReceivedCommands?.[0]?.appendContinuationItemsAction?.continuationItems ??
+    [];
+  const videos: any[] = [];
+  for (const section of contents) {
+    for (const item of section?.itemSectionRenderer?.contents ?? []) {
+      const vr = item?.videoRenderer;
+      if (!vr?.videoId) continue;
+      videos.push({
+        videoId: vr.videoId,
+        title: vr.title?.runs?.[0]?.text ?? "",
+        channel: vr.ownerText?.runs?.[0]?.text ?? "",
+        thumbnail: vr.thumbnail?.thumbnails?.slice(-1)[0]?.url?.split("?")[0] ?? "",
+        duration: vr.lengthText?.simpleText ?? "",
+      });
+    }
+  }
+  return videos;
+}
+
+function extractPlaylistsFromSearch(data: any): any[] {
+  const contents: any[] =
+    data?.contents?.twoColumnSearchResultsRenderer?.primaryContents
+      ?.sectionListRenderer?.contents ??
+    data?.onResponseReceivedCommands?.[0]?.appendContinuationItemsAction?.continuationItems ??
+    [];
+  const playlists: any[] = [];
+  for (const section of contents) {
+    for (const item of section?.itemSectionRenderer?.contents ?? []) {
+      const pr = item?.playlistRenderer;
+      if (!pr?.playlistId) continue;
+      playlists.push({
+        playlistId: pr.playlistId,
+        title: pr.title?.simpleText ?? "",
+        channel: pr.longBylineText?.runs?.[0]?.text ?? pr.shortBylineText?.runs?.[0]?.text ?? "",
+        thumbnail: pr.thumbnails?.[0]?.thumbnails?.slice(-1)?.[0]?.url?.split("?")?.[0] ?? "",
+        episodeCount: parseInt(pr.videoCount ?? "0") || 0,
+      });
+    }
+  }
+  return playlists;
+}
+
+async function innertubeSearch(q: string, params: string): Promise<any> {
+  const r = await fetch(
+    `https://www.youtube.com/youtubei/v1/search?key=${INNERTUBE_KEY}&prettyPrint=false`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
+      body: JSON.stringify({ context: INNERTUBE_CONTEXT, query: q, params }),
+      signal: AbortSignal.timeout(12000),
+    },
+  );
+  if (!r.ok) return null;
+  return r.json();
+}
+
+/** Fetch all videos from a YouTube playlist using the innertube browse API (no API key) */
+async function fetchPlaylistItemsInternal(
+  playlistId: string,
+  maxItems = 200,
+): Promise<Array<{ videoId: string; title: string; thumbnail: string; position: number }>> {
+  const items: Array<{ videoId: string; title: string; thumbnail: string; position: number }> = [];
+
+  async function fetchPage(body: object): Promise<string | null> {
+    const r = await fetch(
+      `https://www.youtube.com/youtubei/v1/browse?key=${INNERTUBE_KEY}&prettyPrint=false`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15000),
+      },
+    );
+    if (!r.ok) return null;
+    const data = await r.json() as any;
+
+    // Extract video items — may be nested differently across responses
+    const videoList: any[] =
+      data?.contents?.twoColumnBrowseResultsRenderer?.tabs?.[0]
+        ?.tabRenderer?.content?.sectionListRenderer?.contents?.[0]
+        ?.itemSectionRenderer?.contents?.[0]?.playlistVideoListRenderer?.contents ??
+      data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction
+        ?.continuationItems ?? [];
+
+    let continuationToken: string | null = null;
+    for (const item of videoList) {
+      const pvr = item?.playlistVideoRenderer;
+      if (pvr?.videoId) {
+        const vid: string = pvr.videoId;
+        const title: string = pvr.title?.runs?.[0]?.text ?? pvr.title?.simpleText ?? vid;
+        const thumb: string =
+          pvr.thumbnail?.thumbnails?.slice(-1)[0]?.url?.split("?")[0] ??
+          `https://img.youtube.com/vi/${vid}/mqdefault.jpg`;
+        const position: number =
+          parseInt(pvr.index?.simpleText ?? String(items.length)) || items.length;
+        if (title !== "Private video" && title !== "Deleted video") {
+          items.push({ videoId: vid, title: sanitizeText(title, 300), thumbnail: thumb, position });
+        }
+      }
+      if (item?.continuationItemRenderer) {
+        continuationToken =
+          item.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token ?? null;
+      }
+    }
+    return continuationToken;
+  }
+
+  // First page
+  let token = await fetchPage({ context: INNERTUBE_CONTEXT, browseId: `VL${playlistId}` });
+
+  // Paginate
+  let page = 0;
+  while (token && items.length < maxItems && page < 5) {
+    try {
+      token = await fetchPage({ context: INNERTUBE_CONTEXT, continuation: token }) ?? null;
+      page++;
+    } catch { break; }
+  }
+
+  return items.sort((a, b) => a.position - b.position).slice(0, maxItems);
+}
+
 // Spanish → English genre/keyword translations (shared with archiveSearch logic)
 const GENRE_MAP: Record<string, string> = {
   "acción": "action", "accion": "action",
@@ -321,31 +453,48 @@ async function fetchPlaylistItems(playlistId: string, apiKey: string, maxItems =
 
 // Preview: return playlist info + video list without importing
 router.get("/youtube/playlist-preview", requireAdminAuth, async (req: Request, res: Response) => {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) return res.status(503).json({ error: "YOUTUBE_API_KEY no configurada", needsKey: true });
-
   const url = String(req.query.url || "").trim();
   const playlistId = extractPlaylistId(url);
   if (!playlistId) return res.status(400).json({ error: "URL de playlist inválida. Debe contener ?list=..." });
 
   try {
-    // Fetch playlist metadata
-    const metaParams = new URLSearchParams({ part: "snippet", id: playlistId, key: apiKey });
-    const metaRes = await fetch(`${YT_API}/playlists?${metaParams}`, { signal: AbortSignal.timeout(10000) });
-    if (!metaRes.ok) return res.status(500).json({ error: "Error al obtener información de la playlist" });
-    const metaData = await metaRes.json() as any;
-    const playlist = metaData.items?.[0];
-    if (!playlist) return res.status(404).json({ error: "Playlist no encontrada o es privada" });
+    // Try innertube first (no API key needed)
+    const items = await fetchPlaylistItemsInternal(playlistId, 200);
 
-    const sn = playlist.snippet || {};
-    const items = await fetchPlaylistItems(playlistId, apiKey, 200);
+    if (items.length === 0) {
+      // Fall back to YouTube Data API if key is available
+      const apiKey = process.env.YOUTUBE_API_KEY;
+      if (apiKey) {
+        const metaParams = new URLSearchParams({ part: "snippet", id: playlistId, key: apiKey });
+        const metaRes = await fetch(`${YT_API}/playlists?${metaParams}`, { signal: AbortSignal.timeout(10000) });
+        if (metaRes.ok) {
+          const metaData = await metaRes.json() as any;
+          const playlist = metaData.items?.[0];
+          if (playlist) {
+            const sn = playlist.snippet || {};
+            const apiItems = await fetchPlaylistItems(playlistId, apiKey, 200);
+            return res.json({
+              playlistId,
+              title: sanitizeText(sn.title || "", 300),
+              description: sanitizeText(sn.description || "", 500),
+              thumbnail: sn.thumbnails?.medium?.url || sn.thumbnails?.standard?.url || "",
+              channelTitle: sanitizeText(sn.channelTitle || "", 100),
+              itemCount: apiItems.length,
+              items: apiItems,
+            });
+          }
+        }
+      }
+      return res.status(404).json({ error: "Playlist no encontrada, vacía o privada" });
+    }
 
+    const firstThumb = items[0]?.thumbnail ?? "";
     res.json({
       playlistId,
-      title: sanitizeText(sn.title || "", 300),
-      description: sanitizeText(sn.description || "", 500),
-      thumbnail: sn.thumbnails?.medium?.url || sn.thumbnails?.standard?.url || "",
-      channelTitle: sanitizeText(sn.channelTitle || "", 100),
+      title: "",
+      description: "",
+      thumbnail: firstThumb,
+      channelTitle: "",
       itemCount: items.length,
       items,
     });
@@ -356,15 +505,17 @@ router.get("/youtube/playlist-preview", requireAdminAuth, async (req: Request, r
 
 // Import: create series + season + all episodes from playlist
 router.post("/youtube/import-playlist", requireAdminAuth, async (req: Request, res: Response) => {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) return res.status(503).json({ error: "YOUTUBE_API_KEY no configurada", needsKey: true });
-
   const { playlistId, title, description, poster, banner, category, genre, year } = req.body;
   if (!playlistId) return res.status(400).json({ error: "playlistId requerido" });
   if (!title) return res.status(400).json({ error: "title requerido" });
 
   try {
-    const items = await fetchPlaylistItems(playlistId, apiKey, 200);
+    // Try innertube first (no API key needed), fall back to official API if available
+    let items = await fetchPlaylistItemsInternal(playlistId, 200);
+    if (items.length === 0) {
+      const apiKey = process.env.YOUTUBE_API_KEY;
+      if (apiKey) items = await fetchPlaylistItems(playlistId, apiKey, 200);
+    }
     if (items.length === 0) return res.status(400).json({ error: "La playlist está vacía o es privada" });
 
     // Create series
@@ -430,100 +581,39 @@ function buildSeriesVideoQuery(raw: string): string {
 }
 
 router.get("/youtube/series-search", requireAdminAuth, async (req: Request, res: Response) => {
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) {
-    return res.status(503).json({ error: "YOUTUBE_API_KEY no configurada", needsKey: true });
-  }
-
   const q = String(req.query.q || "").trim();
   if (!q) return res.json({ playlists: [], videos: [] });
 
   try {
-    // 1. Search playlists
-    const playlistParams = new URLSearchParams({
-      part: "snippet",
-      type: "playlist",
-      q,
-      maxResults: "12",
-      key: apiKey,
-    });
-    const [playlistRes, videoRes] = await Promise.all([
-      fetch(`${YT_API}/search?${playlistParams}`, { signal: AbortSignal.timeout(15000) }),
-      fetch(`${YT_API}/search?${new URLSearchParams({
-        part: "snippet",
-        type: "video",
-        q: buildSeriesVideoQuery(q),
-        videoDuration: "long",
-        maxResults: "10",
-        key: apiKey,
-      })}`, { signal: AbortSignal.timeout(15000) }),
+    // Search playlists and videos in parallel using innertube (no API key needed)
+    // EgIQBA%3D%3D = playlists filter, EgIQAQ%3D%3D = videos filter
+    const [playlistData, videoData] = await Promise.all([
+      innertubeSearch(q, "EgIQBA%3D%3D"),
+      innertubeSearch(buildSeriesVideoQuery(q), "EgIQAQ%3D%3D"),
     ]);
 
-    const playlistData = playlistRes.ok ? await playlistRes.json() as any : { items: [] };
-    const videoData = videoRes.ok ? await videoRes.json() as any : { items: [] };
+    const rawPlaylists = playlistData ? extractPlaylistsFromSearch(playlistData) : [];
+    const rawVideos = videoData ? extractVideosFromSearch(videoData) : [];
 
-    const playlistItems: any[] = playlistData.items || [];
-    const videoItems: any[] = videoData.items || [];
+    const playlists = rawPlaylists.map((p) => ({
+      playlistId: p.playlistId,
+      title: sanitizeText(p.title, 300),
+      description: "",
+      thumbnail: p.thumbnail || `https://img.youtube.com/vi/default/mqdefault.jpg`,
+      channel: sanitizeText(p.channel, 100),
+      episodeCount: p.episodeCount,
+      url: `https://www.youtube.com/playlist?list=${p.playlistId}`,
+    }));
 
-    // 2. Fetch playlist details (item count)
-    let playlistDetails: Record<string, { itemCount: number }> = {};
-    const playlistIds = playlistItems.map((i: any) => i.id?.playlistId).filter(Boolean).join(",");
-    if (playlistIds) {
-      const detailRes = await fetch(`${YT_API}/playlists?${new URLSearchParams({ part: "contentDetails", id: playlistIds, key: apiKey })}`, { signal: AbortSignal.timeout(10000) });
-      if (detailRes.ok) {
-        const dd = await detailRes.json() as any;
-        for (const p of dd.items || []) {
-          playlistDetails[p.id] = { itemCount: p.contentDetails?.itemCount ?? 0 };
-        }
-      }
-    }
-
-    // 3. Fetch video durations
-    let durationMap: Record<string, string> = {};
-    const videoIds = videoItems.map((i: any) => i.id?.videoId).filter(Boolean).join(",");
-    if (videoIds) {
-      const dRes = await fetch(`${YT_API}/videos?${new URLSearchParams({ part: "contentDetails", id: videoIds, key: apiKey })}`, { signal: AbortSignal.timeout(10000) });
-      if (dRes.ok) {
-        const dd = await dRes.json() as any;
-        for (const v of dd.items || []) {
-          durationMap[v.id] = parseISODuration(v.contentDetails?.duration || "");
-        }
-      }
-    }
-
-    const playlists = playlistItems
-      .map((item: any) => {
-        const playlistId: string = item.id?.playlistId || "";
-        if (!playlistId) return null;
-        const sn = item.snippet || {};
-        return {
-          playlistId,
-          title: sanitizeText(sn.title || "", 300),
-          description: sanitizeText(sn.description || "", 300),
-          thumbnail: sn.thumbnails?.medium?.url || sn.thumbnails?.default?.url || `https://img.youtube.com/vi/default/mqdefault.jpg`,
-          channel: sanitizeText(sn.channelTitle || "", 100),
-          episodeCount: playlistDetails[playlistId]?.itemCount ?? 0,
-          url: `https://www.youtube.com/playlist?list=${playlistId}`,
-        };
-      })
-      .filter(Boolean);
-
-    const videos = videoItems
-      .map((item: any) => {
-        const videoId: string = item.id?.videoId || "";
-        if (!videoId) return null;
-        const sn = item.snippet || {};
-        return {
-          videoId,
-          title: sanitizeText(sn.title || "", 300),
-          description: sanitizeText(sn.description || "", 300),
-          thumbnail: sn.thumbnails?.medium?.url || sn.thumbnails?.default?.url || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-          channel: sanitizeText(sn.channelTitle || "", 100),
-          duration: durationMap[videoId] || "",
-          url: `https://www.youtube.com/watch?v=${videoId}`,
-        };
-      })
-      .filter(Boolean);
+    const videos = rawVideos.map((v) => ({
+      videoId: v.videoId,
+      title: sanitizeText(v.title, 300),
+      description: "",
+      thumbnail: v.thumbnail || `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg`,
+      channel: sanitizeText(v.channel, 100),
+      duration: v.duration || "",
+      url: `https://www.youtube.com/watch?v=${v.videoId}`,
+    }));
 
     res.json({ playlists, videos });
   } catch (e: any) {
