@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { setToken, getToken } from '@/lib/auth';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 import { useTvKeyboard } from '@/hooks/use-tv-keyboard';
-import { Download, Share2, Smartphone, QrCode, X, Tv, CheckCircle, Loader2 } from 'lucide-react';
+import { Download, Share2, Smartphone, QrCode, X, Tv, CheckCircle, Loader2, Eye, EyeOff, Bookmark, BookmarkCheck } from 'lucide-react';
 import logo from '@assets/imagen_1777670460131.png';
 
 type FocusZone = 'input' | 'submit' | 'qr' | 'install' | 'shortcut';
@@ -42,7 +42,13 @@ function isTvDevice(): boolean {
 }
 
 export default function Login() {
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => {
+    try { return localStorage.getItem('supertv_remembered_code') || ''; } catch { return ''; }
+  });
+  const [isRemembered, setIsRemembered] = useState(() => {
+    try { return !!localStorage.getItem('supertv_remembered_code'); } catch { return false; }
+  });
+  const [showCode, setShowCode] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [conflictMessage, setConflictMessage] = useState('');
   const [showHint, setShowHint] = useState(false);
@@ -58,7 +64,7 @@ export default function Login() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
-  const codeRef = useRef('');
+  const codeRef = useRef(code);
   const qrRef = useRef<HTMLButtonElement>(null);
   const installRef = useRef<HTMLButtonElement>(null);
   const shortcutRef = useRef<HTMLButtonElement>(null);
@@ -124,6 +130,17 @@ export default function Login() {
     setErrorMsg('');
   };
 
+  const handleRemember = () => {
+    const current = (codeRef.current || code).trim();
+    if (isRemembered) {
+      try { localStorage.removeItem('supertv_remembered_code'); } catch {}
+      setIsRemembered(false);
+    } else if (current) {
+      try { localStorage.setItem('supertv_remembered_code', current); } catch {}
+      setIsRemembered(true);
+    }
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     // codeRef.current is always up-to-date even when called from a stale onConfirm closure
@@ -134,6 +151,9 @@ export default function Login() {
       { data: { code: codeToSubmit, deviceId: navigator.userAgent } },
       {
         onSuccess: (data) => {
+          if (isRemembered) {
+            try { localStorage.setItem('supertv_remembered_code', codeToSubmit); } catch {}
+          }
           if (data.sessionConflict) {
             setConflictMessage('Tu código está abierto en otro dispositivo. Se cerrará la otra sesión en 4 segundos...');
             setTimeout(() => { setToken(data.token, 'user'); setLocation('/home'); }, 4000);
@@ -253,22 +273,52 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="w-full space-y-4">
           <div className="space-y-2">
-            <Input
-              ref={inputRef}
-              type="text"
-              value={code}
-              onChange={handleCodeChange}
-              onFocus={() => setFocusZone('input')}
-              placeholder="PON TU CODIGO DE ACCESO"
-              className={`w-full text-center text-2xl py-6 tracking-[0.4em] font-bold bg-card border-border focus-visible:ring-primary focus-visible:border-primary text-foreground placeholder:text-muted-foreground placeholder:text-base placeholder:tracking-normal rounded-lg uppercase ${focusZone === 'input' ? focusRing : ''}`}
-              autoFocus
-              disabled={loginMutation.isPending || !!conflictMessage}
-              maxLength={5}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="characters"
-              spellCheck={false}
-            />
+            {/* Input wrapper with eye button */}
+            <div className="relative">
+              <Input
+                ref={inputRef}
+                type={showCode ? 'text' : 'password'}
+                value={code}
+                onChange={handleCodeChange}
+                onFocus={() => setFocusZone('input')}
+                placeholder="PON TU CODIGO DE ACCESO"
+                className={`w-full text-center text-2xl py-6 pr-14 tracking-[0.4em] font-bold bg-card border-border focus-visible:ring-primary focus-visible:border-primary text-foreground placeholder:text-muted-foreground placeholder:text-base placeholder:tracking-normal rounded-lg uppercase ${focusZone === 'input' ? focusRing : ''}`}
+                autoFocus
+                disabled={loginMutation.isPending || !!conflictMessage}
+                maxLength={5}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowCode(v => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                aria-label={showCode ? 'Ocultar código' : 'Mostrar código'}
+              >
+                {showCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+
+            {/* Remember button */}
+            <button
+              type="button"
+              onClick={handleRemember}
+              disabled={!code.trim() && !isRemembered}
+              className={`w-full flex items-center justify-center gap-2 py-2 text-sm rounded-lg border transition-all ${
+                isRemembered
+                  ? 'border-primary/60 bg-primary/10 text-primary'
+                  : 'border-border text-muted-foreground hover:text-foreground hover:border-border/80 disabled:opacity-30 disabled:cursor-not-allowed'
+              }`}
+            >
+              {isRemembered
+                ? <><BookmarkCheck className="w-4 h-4" /> Código recordado — toca para olvidar</>
+                : <><Bookmark className="w-4 h-4" /> Recordar este código</>
+              }
+            </button>
+
             {errorMsg && (
               <p className="text-destructive text-sm text-center animate-in fade-in slide-in-from-top-1">{errorMsg}</p>
             )}
