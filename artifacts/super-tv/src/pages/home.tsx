@@ -50,7 +50,6 @@ import { getFavorites, getAllProgress, getHistory, toggleFavorite, getAllSeriesP
 import { useVoiceSearch } from '@/hooks/use-voice-search';
 import logo from '@assets/logo_supertv.png';
 import lettersLogo from '@assets/super-tv-letters-logo.png';
-import channelDefaultLogo from '@assets/logo_supertv.png';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 import { ContentRow, isChannel } from '@/components/ContentRow';
 import type { ContentItem, MovieItem } from '@/components/ContentRow';
@@ -63,6 +62,7 @@ type TabKey = 'home' | 'channels' | 'movies' | 'series' | 'favorites';
 type NavZone = 'sidebar' | 'rows' | 'miniplayer' | 'hero' | 'catfilter';
 
 const ADULT_RE = /\b(xxx|porno?|pornog\w*|sexo?|sexual\w*|er[oó]tic[ao]?|adulto?|nsfw|hentai|nude|desnud[ao]|naked|putit[ao]?|obscen\w*|escort|prostitu\w*)\b/i;
+const channelDefaultLogo = '/channel-default.png';
 
 function getChannelGridCols(): number {
   const w = window.innerWidth;
