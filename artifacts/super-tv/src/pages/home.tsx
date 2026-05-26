@@ -1548,7 +1548,6 @@ export default function Home() {
                     onFavoriteToggle={doToggleFav}
                     progressMap={progressMap}
                     favSet={favSet}
-                    portrait
                   />
                 )}
                 {favoriteSeries.length > 0 && (
@@ -1741,7 +1740,6 @@ export default function Home() {
                       favSet={favSet}
                       isNewFn={row.showBadge ? isNew : undefined}
                       showProgress={row.showProgress}
-                      portrait
                       onHoverItem={(item) => setHoveredHero(item ? { ...item, type: 'movie' } : null)}
                       disableHover={inputMode === 'keyboard'}
                     />
