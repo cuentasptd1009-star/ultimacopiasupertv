@@ -112,7 +112,8 @@ function MovieGridCard({
               <iframe
                 key={ytSrc}
                 src={ytSrc}
-                className="w-full h-full"
+                className="absolute pointer-events-none"
+                style={{ width: '170%', height: '170%', top: '-35%', left: '-35%' }}
                 allow="autoplay; encrypted-media"
                 allowFullScreen={false}
                 frameBorder="0"

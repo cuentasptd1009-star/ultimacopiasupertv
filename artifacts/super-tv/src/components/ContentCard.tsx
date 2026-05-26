@@ -168,11 +168,12 @@ export const ContentCard = memo(function ContentCard({
         {previewActive && canPreview && (
           <div className="absolute inset-0 z-10 bg-black animate-[fadeIn_0.4s_ease-in]">
             {ytSrc ? (
-              /* YouTube iframe preview */
+              /* YouTube iframe preview — oversized + centered to crop out branding */
               <iframe
                 key={ytSrc}
                 src={ytSrc}
-                className="w-full h-full"
+                className="absolute pointer-events-none"
+                style={{ width: '170%', height: '170%', top: '-35%', left: '-35%' }}
                 allow="autoplay; encrypted-media"
                 allowFullScreen={false}
                 frameBorder="0"
