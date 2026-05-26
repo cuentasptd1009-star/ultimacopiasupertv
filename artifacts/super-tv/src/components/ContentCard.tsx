@@ -86,7 +86,7 @@ export const ContentCard = memo(function ContentCard({
   const [imgError, setImgError] = useState(false);
   const [previewActive, setPreviewActive] = useState(false);
   const [cardRect, setCardRect] = useState<DOMRect | null>(null);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const [previewBtnIdx, setPreviewBtnIdx] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHoveringRef = useRef(false);
@@ -99,7 +99,7 @@ export const ContentCard = memo(function ContentCard({
   const canPreview = !!(ytId || isDirectVideo);
 
   const ytSrc = ytId
-    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1&enablejsapi=1`
+    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1&enablejsapi=1`
     : null;
 
   const startTimer = () => {
@@ -123,7 +123,7 @@ export const ContentCard = memo(function ContentCard({
   // Reset state when preview closes
   useEffect(() => {
     if (!previewActive) {
-      setMuted(true);
+      setMuted(false);
       setPreviewBtnIdx(0);
     }
   }, [previewActive]);

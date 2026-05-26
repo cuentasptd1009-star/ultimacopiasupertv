@@ -22,6 +22,15 @@ export interface MovieItem {
   category?: string | null;
   createdAt: string;
   filePath?: string | null;
+  duration?: number | null;
+}
+
+function fmtDuration(mins: number | null | undefined): string | null {
+  if (!mins || mins <= 0) return null;
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
 export type ContentItem = ChannelItem | MovieItem;
@@ -139,6 +148,7 @@ export const ContentRow = memo(function ContentRow({
               progress={prog ?? null}
               isFavorite={fav}
               badge={badge}
+              duration={!ch ? fmtDuration((item as MovieItem).duration) ?? undefined : undefined}
               previewUrl={!ch ? (item as MovieItem).filePath ?? undefined : undefined}
               onClick={() => onItemClick(item)}
               onFavoriteToggle={
