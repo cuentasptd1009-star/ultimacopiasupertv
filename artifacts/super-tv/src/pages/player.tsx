@@ -353,6 +353,9 @@ export default function PlayerPage() {
     let destroyed = false;
 
     const init = async () => {
+      // React's `muted` JSX prop doesn't apply to the DOM — set imperatively so
+      // the browser allows autoplay (muted autoplay is universally permitted)
+      video.muted = true;
       try {
         if (fmt === 'hls') {
           const Hls = (await getHls()).default;

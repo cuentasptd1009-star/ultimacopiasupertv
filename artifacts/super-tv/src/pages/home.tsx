@@ -672,6 +672,7 @@ export default function Home() {
     }
     if (activeTab === 'home') {
       const rows: ContentRowData[] = [];
+      if (combinedContinueWatching.length > 0) rows.push({ id: 'continue', title: 'Continuar viendo', emoji: '▶', items: [] as ContentItem[], showProgress: true });
       if (recentMovies.length > 0) rows.push({ id: 'recent-mov', title: 'Películas recientes', emoji: '🎬', items: recentMovies as ContentItem[], showBadge: true });
       const recentSeries = seriesList.slice(0, 14);
       if (recentSeries.length > 0) rows.push({ id: 'recent-ser', title: 'Series disponibles', emoji: '📺', items: recentSeries.map(s => ({ ...s, _isSeries: true })) as unknown as ContentItem[] });

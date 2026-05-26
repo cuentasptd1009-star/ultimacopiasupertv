@@ -250,6 +250,9 @@ export default function VodPlayerPage() {
     video.addEventListener('ended', onEnded);
 
     const initVideo = async () => {
+      // React's `muted` JSX prop doesn't apply to the DOM — set imperatively so
+      // the browser allows autoplay (muted autoplay is universally permitted)
+      video.muted = true;
       try {
         if (format === 'hls') {
           const Hls = (await import('hls.js')).default;
