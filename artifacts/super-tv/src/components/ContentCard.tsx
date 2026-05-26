@@ -90,7 +90,7 @@ export const ContentCard = memo(function ContentCard({
       <div
         className={`${portrait ? 'aspect-[2/3]' : 'aspect-video'} rounded-lg overflow-hidden relative shadow-md transition-[box-shadow,ring] duration-200 ${
           isFocused
-            ? 'ring-2 ring-primary shadow-[0_0_24px_rgba(220,38,38,0.6)] ring-offset-1 ring-offset-background'
+            ? 'ring-2 ring-orange-500 shadow-[0_0_24px_rgba(249,115,22,0.6)] ring-offset-1 ring-offset-background'
             : 'group-hover:shadow-[0_8px_40px_rgba(0,0,0,0.9)] group-hover:ring-1 group-hover:ring-white/20'
         }`}
       >
