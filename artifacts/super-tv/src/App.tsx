@@ -1,10 +1,11 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useCallback } from "react";
 import { Switch, Route, Router as WouterRouter, useSearch } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { getToken } from "@/lib/auth";
+import { SplashScreen } from "@/components/SplashScreen";
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Login = lazy(() => import("@/pages/login"));
@@ -42,6 +43,32 @@ const queryClient = new QueryClient({
   },
 });
 
+function splashAlreadyShown(): boolean {
+  try { return !!sessionStorage.getItem('supertv_splash_shown'); } catch { return false; }
+}
+
+function markSplashShown() {
+  try { sessionStorage.setItem('supertv_splash_shown', '1'); } catch {}
+}
+
+function HomeRoute() {
+  const [showSplash, setShowSplash] = useState(() => !splashAlreadyShown());
+
+  const handleSplashDone = useCallback(() => {
+    markSplashShown();
+    setShowSplash(false);
+  }, []);
+
+  return (
+    <>
+      <Suspense fallback={null}>
+        <Home />
+      </Suspense>
+      {showSplash && <SplashScreen onDone={handleSplashDone} />}
+    </>
+  );
+}
+
 function PlayerRoute() {
   const search = useSearch();
   return <PlayerPage key={search} />;
@@ -56,7 +83,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Login} />
-      <Route path="/home" component={Home} />
+      <Route path="/home" component={HomeRoute} />
       <Route path="/player" component={PlayerRoute} />
       <Route path="/vod-player" component={VodPlayerRoute} />
       <Route path="/pelicula/:id" component={MovieDetail} />
