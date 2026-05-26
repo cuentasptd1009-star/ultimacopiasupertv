@@ -6,6 +6,7 @@ import { Play, ArrowLeft, Film, Tag, Search, X, Lock, Heart, Info } from 'lucide
 import { getProgress, toggleFavorite, getFavorites, toggleExternalFavorite, isExternalFavorite, addExternalHistory, type ExternalItem } from '@/lib/user-data';
 import { clearTokens, getToken } from '@/lib/auth';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import logo from '@assets/imagen_1777670460131.png';
 import { ContentCard, extractYouTubeId } from '@/components/ContentCard';
 import { YouTubePlayerPage } from '@/components/YouTubePlayerPage';
@@ -43,6 +44,8 @@ interface GridMovie {
   genre?: string | null;
 }
 
+const GRID_EXPAND = 1.35;
+
 function MovieGridCard({
   mv,
   isFocused,
@@ -55,110 +58,129 @@ function MovieGridCard({
   onClick: () => void;
 }) {
   const [previewActive, setPreviewActive] = useState(false);
+  const [cardRect, setCardRect] = useState<DOMRect | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHoveringRef = useRef(false);
+  const innerRef = useRef<HTMLDivElement | null>(null);
 
   const ytId = mv.filePath ? extractYouTubeId(mv.filePath) : null;
   const isDirectVideo = !!(mv.filePath && !ytId);
   const canPreview = !!(ytId || isDirectVideo);
 
+  const ytSrc = ytId
+    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`
+    : null;
+
   const startTimer = () => {
-    if (!mv.filePath) return;
+    if (!canPreview) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setPreviewActive(true), 1500);
+    timerRef.current = setTimeout(() => {
+      if (!isHoveringRef.current) return;
+      if (innerRef.current) setCardRect(innerRef.current.getBoundingClientRect());
+      setPreviewActive(true);
+    }, 1500);
   };
 
   const stopPreview = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     setPreviewActive(false);
+    setCardRect(null);
   };
 
   useEffect(() => {
-    if (isFocused) startTimer();
-    else stopPreview();
+    if (isFocused) { isHoveringRef.current = true; startTimer(); }
+    else { isHoveringRef.current = false; stopPreview(); }
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFocused]);
 
-  const ytSrc = ytId
-    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`
-    : null;
+  const handleMouseEnter = () => { isHoveringRef.current = true; startTimer(); };
+  const handleMouseLeave = () => {
+    isHoveringRef.current = false;
+    if (!previewActive) stopPreview();
+  };
+  const handlePortalLeave = () => { isHoveringRef.current = false; stopPreview(); };
+
+  const previewPortal = previewActive && cardRect ? createPortal(
+    <div
+      className="fixed rounded-xl overflow-hidden cursor-pointer"
+      style={{
+        zIndex: 9999,
+        top: cardRect.top - cardRect.height * (GRID_EXPAND - 1) / 2,
+        left: cardRect.left - cardRect.width * (GRID_EXPAND - 1) / 2,
+        width: cardRect.width * GRID_EXPAND,
+        height: cardRect.height * GRID_EXPAND,
+        boxShadow: '0 24px 80px rgba(0,0,0,0.95)',
+        animation: 'fadeIn 0.35s ease-out',
+      }}
+      onMouseLeave={handlePortalLeave}
+      onClick={onClick}
+    >
+      {ytSrc ? (
+        <iframe
+          key={ytSrc}
+          src={ytSrc}
+          className="absolute pointer-events-none"
+          style={{ width: '170%', height: '170%', top: '-35%', left: '-35%' }}
+          allow="autoplay; encrypted-media"
+          allowFullScreen={false}
+          frameBorder="0"
+          title={mv.title}
+        />
+      ) : mv.filePath ? (
+        <video src={mv.filePath} autoPlay loop playsInline className="w-full h-full object-cover" onError={() => setPreviewActive(false)} />
+      ) : null}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute bottom-2 left-3 right-3 pointer-events-none">
+        <p className="text-white text-xs font-semibold leading-tight line-clamp-2 drop-shadow-lg">{mv.title}</p>
+      </div>
+    </div>,
+    document.body,
+  ) : null;
 
   return (
-    <div
-      ref={cardRef}
-      onMouseEnter={startTimer}
-      onMouseLeave={stopPreview}
-      onClick={onClick}
-      className={`group flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all duration-300 ${
-        previewActive
-          ? 'scale-[1.22] z-30 shadow-[0_12px_48px_rgba(0,0,0,0.85)]'
-          : isFocused
+    <>
+      <div
+        ref={(el) => { innerRef.current = el; cardRef?.(el); }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={onClick}
+        className={`group flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${
+          isFocused
             ? 'ring-4 ring-orange-400 scale-105 shadow-[0_0_20px_rgba(251,146,60,0.5)] z-10'
             : 'hover:scale-105 hover:ring-1 hover:ring-white/20'
-      }`}
-    >
-      <div className="aspect-video bg-white/5 relative flex items-center justify-center overflow-hidden rounded-xl">
-        {mv.poster ? (
-          <img
-            src={mv.poster}
-            alt={mv.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-        ) : (
-          <Film className="w-8 h-8 text-white/15" />
-        )}
-
-        {/* Netflix-style preview overlay */}
-        {previewActive && canPreview && (
-          <div className="absolute inset-0 z-10 bg-black animate-[fadeIn_0.4s_ease-in]">
-            {ytSrc ? (
-              <iframe
-                key={ytSrc}
-                src={ytSrc}
-                className="absolute pointer-events-none"
-                style={{ width: '170%', height: '170%', top: '-35%', left: '-35%' }}
-                allow="autoplay; encrypted-media"
-                allowFullScreen={false}
-                frameBorder="0"
-                title={mv.title}
-              />
-            ) : (
-              <video
-                src={mv.filePath!}
-                muted={muted}
-                autoPlay
-                loop
-                playsInline
-                className="w-full h-full object-cover"
-                onError={() => setPreviewActive(false)}
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
-          </div>
-        )}
-
-        {/* Play overlay (hidden while preview plays) */}
-        {!previewActive && (
+        }`}
+      >
+        <div className="aspect-video bg-white/5 relative flex items-center justify-center overflow-hidden rounded-xl">
+          {mv.poster ? (
+            <img
+              src={mv.poster}
+              alt={mv.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          ) : (
+            <Film className="w-8 h-8 text-white/15" />
+          )}
           <div className={`absolute inset-0 bg-black/50 flex items-center justify-center transition-opacity ${isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
             <div className="p-2.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/20">
               <Play className="w-5 h-5 text-white fill-white" />
             </div>
           </div>
-        )}
-
-        {mv.category && (
-          <span className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[9px] rounded-md text-white/70 border border-white/10 z-20">{mv.category}</span>
-        )}
-        {mv.year && (
-          <span className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[9px] rounded-md text-white/70 z-20">{mv.year}</span>
-        )}
+          {mv.category && (
+            <span className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[9px] rounded-md text-white/70 border border-white/10 z-10">{mv.category}</span>
+          )}
+          {mv.year && (
+            <span className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[9px] rounded-md text-white/70 z-10">{mv.year}</span>
+          )}
+        </div>
+        <div className="pt-2 px-0.5 pb-1">
+          <h3 className={`font-medium text-xs truncate leading-tight transition-colors ${isFocused ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>{mv.title}</h3>
+          {mv.genre && <p className="text-[10px] text-white/35 mt-0.5 truncate">{mv.genre}</p>}
+        </div>
       </div>
-      <div className="pt-2 px-0.5 pb-1">
-        <h3 className={`font-medium text-xs truncate leading-tight transition-colors ${isFocused ? 'text-white' : 'text-white/80 group-hover:text-white'}`}>{mv.title}</h3>
-        {mv.genre && <p className="text-[10px] text-white/35 mt-0.5 truncate">{mv.genre}</p>}
-      </div>
-    </div>
+      {previewPortal}
+    </>
   );
 }
 
@@ -821,6 +843,7 @@ export default function MovieDetail() {
                             subtitle={item.year}
                             image={item.thumbnail}
                             badge={item.duration ?? null}
+                            previewUrl={`https://www.youtube.com/watch?v=${item.videoId}`}
                             onClick={() => setExternalPlayer({ type: 'youtube', videoId: item.videoId, title: item.title, thumbnail: item.thumbnail })}
                           />
                         ))}
