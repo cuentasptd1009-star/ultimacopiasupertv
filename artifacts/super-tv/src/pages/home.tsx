@@ -265,18 +265,20 @@ function HistoryCard({
   item,
   onClick,
   onRemove,
+  focused,
 }: {
   item: ExternalItem;
   onClick: () => void;
   onRemove: (e: React.MouseEvent) => void;
+  focused?: boolean;
 }) {
   const [imgError, setImgError] = useState(false);
   return (
     <div
       onClick={onClick}
-      className="flex-shrink-0 w-40 sm:w-44 md:w-48 group cursor-pointer select-none transition-transform duration-200 ease-out hover:scale-[1.04] z-10"
+      className={`flex-shrink-0 w-40 sm:w-44 md:w-48 group cursor-pointer select-none transition-transform duration-200 ease-out hover:scale-[1.04] z-10 ${focused ? 'scale-[1.04]' : ''}`}
     >
-      <div className="aspect-video rounded-lg overflow-hidden relative shadow-md transition-[box-shadow,ring] duration-200 group-hover:shadow-[0_8px_40px_rgba(0,0,0,0.9)] group-hover:ring-1 group-hover:ring-white/20">
+      <div className={`aspect-video rounded-lg overflow-hidden relative shadow-md transition-[box-shadow,ring] duration-200 group-hover:shadow-[0_8px_40px_rgba(0,0,0,0.9)] group-hover:ring-1 group-hover:ring-white/20 ${focused ? 'ring-2 ring-white shadow-[0_8px_40px_rgba(0,0,0,0.9)]' : ''}`}>
         {item.thumbnail && !imgError ? (
           <img
             src={item.thumbnail}
@@ -676,6 +678,7 @@ export default function Home() {
       if (recentMovies.length > 0) rows.push({ id: 'recent-mov', title: 'Películas recientes', emoji: '🎬', items: recentMovies as ContentItem[], showBadge: true });
       const recentSeries = seriesList.slice(0, 14);
       if (recentSeries.length > 0) rows.push({ id: 'recent-ser', title: 'Series disponibles', emoji: '📺', items: recentSeries.map(s => ({ ...s, _isSeries: true })) as unknown as ContentItem[] });
+      if (externalHistory.length > 0) rows.push({ id: 'ext-history', title: 'Historial de reproducción', emoji: '', items: externalHistory as unknown as ContentItem[] });
       return rows;
     }
     const rows: ContentRowData[] = [];
@@ -693,8 +696,9 @@ export default function Home() {
       if (items.length > 0) rows.push({ id: `mv-${cat}`, title: cat, emoji: '🎬', items: items as ContentItem[] });
     }
     if (rows.length === 0 && movies.length > 0) rows.push({ id: 'mv-all', title: 'Todas las películas', emoji: '🎬', items: movies as ContentItem[] });
+    if (!q && externalHistory.length > 0) rows.push({ id: 'ext-history', title: 'Historial de reproducción', emoji: '', items: externalHistory as unknown as ContentItem[] });
     return rows;
-  }, [searchQuery, activeTab, allChannels, movies, ytResults, archiveResults, moviesByCategory, continueWatching, recentMovies, recommendations, favoriteMovies, combinedContinueWatching, seriesList]);
+  }, [searchQuery, activeTab, allChannels, movies, ytResults, archiveResults, moviesByCategory, continueWatching, recentMovies, recommendations, favoriteMovies, combinedContinueWatching, seriesList, externalHistory]);
 
   const seriesRows = useMemo((): SeriesRowData[] => {
     if (activeTab !== 'series') return [];
@@ -1726,6 +1730,36 @@ export default function Home() {
                       </section>
                     );
                   }
+                  if (row.id === 'ext-history') {
+                    return (
+                      <section key="ext-history" ref={(el) => { rowRefs.current[rIdx] = el; }}>
+                        <div className="flex items-center gap-3 mb-3">
+                          <Clock className="w-4 h-4 text-white/40" />
+                          <h2 className="text-sm sm:text-base font-semibold text-white/70">Historial de reproducción</h2>
+                          <span className="text-xs text-white/25">{externalHistory.length}</span>
+                          <button
+                            onClick={() => { clearExternalHistory(); setExternalHistory([]); }}
+                            className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-white/35 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                            title="Borrar historial"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Limpiar
+                          </button>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto pb-3" style={{ scrollbarWidth: 'none' }}>
+                          {externalHistory.map((ext, cIdx) => (
+                            <HistoryCard
+                              key={ext.id}
+                              item={ext}
+                              focused={inputMode === 'keyboard' && rowsFocusActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
+                              onClick={() => setExternalPlayer({ type: ext.source, videoId: ext.videoId, url: ext.url, title: ext.title, thumbnail: ext.thumbnail })}
+                              onRemove={e => { e.stopPropagation(); removeExternalHistory(ext.id); setExternalHistory(getExternalHistory()); }}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  }
                   const isExtRow = row.id === 'ext-yt' || row.id === 'ext-yt-movies' || row.id === 'ext-yt-others' || row.id === 'ext-arch';
                   if (isExtRow) {
                     const isArchRow = row.id === 'ext-arch';
@@ -1803,34 +1837,6 @@ export default function Home() {
                   </section>
                 )}
 
-                {/* ── WATCH HISTORY (Home / Movies tab) ── */}
-                {!searchQuery.trim() && externalHistory.length > 0 && (
-                  <section>
-                    <div className="flex items-center gap-3 mb-3">
-                      <Clock className="w-4 h-4 text-white/40" />
-                      <h2 className="text-sm sm:text-base font-semibold text-white/70">Historial de reproducción</h2>
-                      <span className="text-xs text-white/25">{externalHistory.length}</span>
-                      <button
-                        onClick={() => { clearExternalHistory(); setExternalHistory([]); }}
-                        className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] text-white/35 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        title="Borrar historial"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        Limpiar
-                      </button>
-                    </div>
-                    <div className="flex gap-3 overflow-x-auto pb-3" style={{ scrollbarWidth: 'none' }}>
-                      {externalHistory.map(ext => (
-                        <HistoryCard
-                          key={ext.id}
-                          item={ext}
-                          onClick={() => setExternalPlayer({ type: ext.source, videoId: ext.videoId, url: ext.url, title: ext.title, thumbnail: ext.thumbnail })}
-                          onRemove={e => { e.stopPropagation(); removeExternalHistory(ext.id); setExternalHistory(getExternalHistory()); }}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
 
                 {/* External search loading indicator */}
                 {searchQuery.trim().length >= 2 && externalSearchLoading && (
