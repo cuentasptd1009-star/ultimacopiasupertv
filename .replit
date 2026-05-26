@@ -83,6 +83,8 @@ externalPort = 80
 [userenv]
 
 [userenv.shared]
+PORT = "8080"
+API_PORT = "8080"
 
 [nix]
 channel = "stable-25_05"
