@@ -5015,6 +5015,24 @@ function SeriesManager() {
   const [editEp, setEditEp] = useState<EpisodeRow | null>(null);
   const [editEpSaving, setEditEpSaving] = useState(false);
 
+  // YouTube Series Search
+  const [showYtSeriesSearch, setShowYtSeriesSearch] = useState(false);
+  const [ytSQuery, setYtSQuery] = useState('');
+  const [ytSResults, setYtSResults] = useState<{
+    playlists: Array<{ playlistId: string; title: string; description: string; thumbnail: string; channel: string; episodeCount: number; url: string }>;
+    videos: Array<{ videoId: string; title: string; description: string; thumbnail: string; channel: string; duration: string; url: string }>;
+  } | null>(null);
+  const [ytSLoading, setYtSLoading] = useState(false);
+  const [ytSError, setYtSError] = useState('');
+  const [ytSNeedsKey, setYtSNeedsKey] = useState(false);
+  // Expanded import form per result
+  const [ytSExpandedPlaylist, setYtSExpandedPlaylist] = useState<string | null>(null);
+  const [ytSExpandedVideo, setYtSExpandedVideo] = useState<string | null>(null);
+  const [ytSPlaylistForms, setYtSPlaylistForms] = useState<Record<string, { title: string; category: string; genre: string; year: string }>>({});
+  const [ytSVideoForms, setYtSVideoForms] = useState<Record<string, { title: string; category: string; genre: string }>>({});
+  const [ytSImporting, setYtSImporting] = useState<Set<string>>(new Set());
+  const [ytSImported, setYtSImported] = useState<Set<string>>(new Set());
+
   const [showEpUrlChecker, setShowEpUrlChecker] = useState(false);
   const [epUrlCheckItems, setEpUrlCheckItems] = useState<Array<{ epId: number; seriesTitle: string; seasonTitle: string; epTitle: string; url: string; status: 'pending' | 'ok' | 'broken' | 'checking' }>>([]);
   const [epUrlChecking, setEpUrlChecking] = useState(false);
@@ -5293,6 +5311,68 @@ function SeriesManager() {
     setYtManualCreating(false);
   };
 
+  const ytSeriesSearch = async () => {
+    if (!ytSQuery.trim()) return;
+    setYtSLoading(true);
+    setYtSError('');
+    setYtSNeedsKey(false);
+    setYtSResults(null);
+    setYtSExpandedPlaylist(null);
+    setYtSExpandedVideo(null);
+    setYtSImported(new Set());
+    try {
+      const r = await fetch(`${BASE_API}/api/youtube/series-search?q=${encodeURIComponent(ytSQuery)}`, {
+        headers: { Authorization: `Bearer ${getAdminToken()}` },
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        if (data.needsKey) { setYtSNeedsKey(true); setYtSError(data.error || 'API key requerida'); }
+        else throw new Error(data.error || 'Error buscando');
+        return;
+      }
+      setYtSResults(data);
+    } catch (e: any) { setYtSError(e.message); }
+    finally { setYtSLoading(false); }
+  };
+
+  const ytSImportPlaylist = async (playlistId: string, form: { title: string; category: string; genre: string; year: string }) => {
+    if (!form.title.trim()) { toast({ variant: 'destructive', title: 'El título es requerido' }); return; }
+    setYtSImporting(prev => new Set(prev).add(playlistId));
+    try {
+      const r = await fetch(`${BASE_API}/api/youtube/import-playlist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAdminToken()}` },
+        body: JSON.stringify({ playlistId, title: form.title.trim(), category: form.category || undefined, genre: form.genre || undefined, year: form.year ? Number(form.year) : undefined }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Error al importar');
+      toast({ title: `"${form.title}" importada con ${data.episodesCreated} episodios` });
+      setYtSImported(prev => new Set(prev).add(playlistId));
+      setYtSExpandedPlaylist(null);
+      refresh();
+    } catch (e: any) { toast({ variant: 'destructive', title: 'Error al importar', description: e.message }); }
+    finally { setYtSImporting(prev => { const s = new Set(prev); s.delete(playlistId); return s; }); }
+  };
+
+  const ytSImportVideo = async (videoId: string, form: { title: string; category: string; genre: string }, thumbnail: string) => {
+    if (!form.title.trim()) { toast({ variant: 'destructive', title: 'El título es requerido' }); return; }
+    setYtSImporting(prev => new Set(prev).add(videoId));
+    try {
+      const r = await fetch(`${BASE_API}/api/youtube/import-video-as-series`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAdminToken()}` },
+        body: JSON.stringify({ videoId, title: form.title.trim(), category: form.category || undefined, genre: form.genre || undefined, poster: thumbnail }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Error al importar');
+      toast({ title: `"${form.title}" importada como serie` });
+      setYtSImported(prev => new Set(prev).add(videoId));
+      setYtSExpandedVideo(null);
+      refresh();
+    } catch (e: any) { toast({ variant: 'destructive', title: 'Error al importar', description: e.message }); }
+    finally { setYtSImporting(prev => { const s = new Set(prev); s.delete(videoId); return s; }); }
+  };
+
   const checkEpisodeUrls = async () => {
     setEpUrlChecking(true);
     setEpUrlCheckSel(new Set());
@@ -5433,6 +5513,9 @@ function SeriesManager() {
           </Button>
           <Button size="sm" variant="outline" onClick={() => setShowYtManual(p => !p)} className="flex items-center gap-1.5">
             <Youtube className="w-4 h-4" /> Serie YouTube
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => { setShowYtSeriesSearch(true); setYtSResults(null); setYtSQuery(''); setYtSError(''); setYtSNeedsKey(false); setYtSImported(new Set()); }} className="flex items-center gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10">
+            <Youtube className="w-4 h-4 text-red-500" /> Buscar en YouTube
           </Button>
           <Button size="sm" variant="outline" onClick={() => { setShowEpUrlChecker(p => !p); if (!showEpUrlChecker) { setEpUrlCheckItems([]); setEpUrlCheckSel(new Set()); } }} className="flex items-center gap-1.5">
             <AlertTriangle className="w-4 h-4" /> Verificar URLs
@@ -5893,6 +5976,250 @@ function SeriesManager() {
         onClose={() => setShowSmartImport(false)}
         onImported={() => refresh()}
       />
+
+      {/* YouTube Series Search Dialog */}
+      <Dialog open={showYtSeriesSearch} onOpenChange={o => !o && setShowYtSeriesSearch(false)}>
+        <DialogContent className="max-w-2xl w-full h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-4 pt-4 pb-3 border-b border-border flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Youtube className="w-5 h-5 text-red-500" />
+              Buscar series en YouTube
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">Busca playlists (por episodios) o series completas en un solo video</p>
+          </DialogHeader>
+
+          <div className="px-4 py-3 flex-shrink-0 border-b border-border flex gap-2">
+            <Input
+              placeholder="Nombre de la serie… ej: 'Breaking Bad', 'El Chavo', 'narcos'"
+              value={ytSQuery}
+              onChange={e => setYtSQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') ytSeriesSearch(); }}
+              className="flex-1"
+              autoFocus
+            />
+            <Button onClick={ytSeriesSearch} disabled={ytSLoading || !ytSQuery.trim()}>
+              {ytSLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 min-h-0 space-y-4">
+            {ytSError && (
+              <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p>{ytSError}</p>
+                  {ytSNeedsKey && <p className="text-xs mt-1 opacity-70">Agrega tu YOUTUBE_API_KEY en los Secrets del proyecto para usar esta función.</p>}
+                </div>
+              </div>
+            )}
+            {ytSLoading && (
+              <div className="text-center py-16 text-muted-foreground flex flex-col items-center gap-3">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="text-sm">Buscando en YouTube...</span>
+              </div>
+            )}
+            {!ytSLoading && !ytSResults && !ytSError && (
+              <div className="text-center py-16 text-muted-foreground">
+                <Youtube className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                <p className="text-sm">Escribe el nombre de la serie y presiona Enter</p>
+                <p className="text-xs mt-1 opacity-50">Se buscarán playlists con episodios y videos de series completas</p>
+              </div>
+            )}
+
+            {!ytSLoading && ytSResults && (() => {
+              const { playlists, videos } = ytSResults;
+              return (
+                <div className="space-y-5">
+                  {/* Playlists section */}
+                  {playlists.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <ListVideo className="w-4 h-4 text-red-400" />
+                        <p className="text-xs font-semibold text-foreground/80 uppercase tracking-wide">Por episodios — Playlists ({playlists.length})</p>
+                      </div>
+                      {playlists.map(pl => (
+                        <div key={pl.playlistId} className="rounded-lg border border-border bg-card overflow-hidden">
+                          <div className="flex gap-3 p-3">
+                            <div className="relative flex-shrink-0">
+                              <img src={pl.thumbnail} alt="" className="w-24 h-14 object-cover rounded bg-muted" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              {pl.episodeCount > 0 && (
+                                <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-bold px-1 py-0.5 rounded">
+                                  {pl.episodeCount} ep.
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm leading-tight line-clamp-2">{pl.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 truncate">{pl.channel}</p>
+                              {pl.episodeCount > 0 && (
+                                <p className="text-xs text-primary/70 mt-0.5">{pl.episodeCount} episodios en la playlist</p>
+                              )}
+                            </div>
+                            <div className="flex-shrink-0 flex items-start">
+                              {ytSImported.has(pl.playlistId) ? (
+                                <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded">✓ Importada</span>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  variant={ytSExpandedPlaylist === pl.playlistId ? 'default' : 'outline'}
+                                  onClick={() => {
+                                    if (ytSExpandedPlaylist === pl.playlistId) { setYtSExpandedPlaylist(null); return; }
+                                    setYtSExpandedPlaylist(pl.playlistId);
+                                    setYtSExpandedVideo(null);
+                                    if (!ytSPlaylistForms[pl.playlistId]) {
+                                      setYtSPlaylistForms(f => ({ ...f, [pl.playlistId]: { title: pl.title, category: '', genre: '', year: '' } }));
+                                    }
+                                  }}
+                                >
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Importar
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          {ytSExpandedPlaylist === pl.playlistId && !ytSImported.has(pl.playlistId) && (
+                            <div className="px-3 pb-3 pt-0 border-t border-border bg-muted/20 space-y-2">
+                              <p className="text-xs font-medium pt-2 text-muted-foreground">Configurar serie a importar</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="col-span-2 space-y-1">
+                                  <label className="text-[10px] text-muted-foreground">Título de la serie *</label>
+                                  <Input
+                                    value={ytSPlaylistForms[pl.playlistId]?.title || ''}
+                                    onChange={e => setYtSPlaylistForms(f => ({ ...f, [pl.playlistId]: { ...f[pl.playlistId], title: e.target.value } }))}
+                                    className="bg-background h-8 text-xs"
+                                    placeholder="Nombre de la serie"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] text-muted-foreground">Categoría</label>
+                                  <Input value={ytSPlaylistForms[pl.playlistId]?.category || ''} onChange={e => setYtSPlaylistForms(f => ({ ...f, [pl.playlistId]: { ...f[pl.playlistId], category: e.target.value } }))} className="bg-background h-8 text-xs" placeholder="Drama, Acción..." />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] text-muted-foreground">Año</label>
+                                  <Input type="number" value={ytSPlaylistForms[pl.playlistId]?.year || ''} onChange={e => setYtSPlaylistForms(f => ({ ...f, [pl.playlistId]: { ...f[pl.playlistId], year: e.target.value } }))} className="bg-background h-8 text-xs" placeholder="2024" />
+                                </div>
+                              </div>
+                              <div className="flex gap-2 pt-1">
+                                <Button
+                                  size="sm"
+                                  className="h-8 text-xs bg-red-600 hover:bg-red-700"
+                                  disabled={ytSImporting.has(pl.playlistId)}
+                                  onClick={() => ytSImportPlaylist(pl.playlistId, ytSPlaylistForms[pl.playlistId] || { title: pl.title, category: '', genre: '', year: '' })}
+                                >
+                                  {ytSImporting.has(pl.playlistId) ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+                                  Importar {pl.episodeCount > 0 ? `${pl.episodeCount} episodios` : 'playlist'}
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setYtSExpandedPlaylist(null)}>Cancelar</Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Single-video series section */}
+                  {videos.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Film className="w-4 h-4 text-amber-400" />
+                        <p className="text-xs font-semibold text-foreground/80 uppercase tracking-wide">Serie completa — Video único ({videos.length})</p>
+                      </div>
+                      {videos.map(vid => (
+                        <div key={vid.videoId} className="rounded-lg border border-border bg-card overflow-hidden">
+                          <div className="flex gap-3 p-3">
+                            <div className="relative flex-shrink-0">
+                              <img src={vid.thumbnail} alt="" className="w-24 h-14 object-cover rounded bg-muted" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              {vid.duration && (
+                                <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-semibold px-1 py-0.5 rounded tabular-nums">{vid.duration}</span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm leading-tight line-clamp-2">{vid.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 truncate">{vid.channel}</p>
+                              {vid.duration && <p className="text-xs text-amber-400/70 mt-0.5">Duración: {vid.duration}</p>}
+                            </div>
+                            <div className="flex-shrink-0 flex items-start">
+                              {ytSImported.has(vid.videoId) ? (
+                                <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded">✓ Importada</span>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  variant={ytSExpandedVideo === vid.videoId ? 'default' : 'outline'}
+                                  onClick={() => {
+                                    if (ytSExpandedVideo === vid.videoId) { setYtSExpandedVideo(null); return; }
+                                    setYtSExpandedVideo(vid.videoId);
+                                    setYtSExpandedPlaylist(null);
+                                    if (!ytSVideoForms[vid.videoId]) {
+                                      setYtSVideoForms(f => ({ ...f, [vid.videoId]: { title: vid.title, category: '', genre: '' } }));
+                                    }
+                                  }}
+                                >
+                                  <Plus className="w-3 h-3 mr-1" />
+                                  Importar
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          {ytSExpandedVideo === vid.videoId && !ytSImported.has(vid.videoId) && (
+                            <div className="px-3 pb-3 pt-0 border-t border-border bg-muted/20 space-y-2">
+                              <p className="text-xs font-medium pt-2 text-muted-foreground">Configurar serie a importar</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="col-span-2 space-y-1">
+                                  <label className="text-[10px] text-muted-foreground">Título de la serie *</label>
+                                  <Input
+                                    value={ytSVideoForms[vid.videoId]?.title || ''}
+                                    onChange={e => setYtSVideoForms(f => ({ ...f, [vid.videoId]: { ...f[vid.videoId], title: e.target.value } }))}
+                                    className="bg-background h-8 text-xs"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] text-muted-foreground">Categoría</label>
+                                  <Input value={ytSVideoForms[vid.videoId]?.category || ''} onChange={e => setYtSVideoForms(f => ({ ...f, [vid.videoId]: { ...f[vid.videoId], category: e.target.value } }))} className="bg-background h-8 text-xs" placeholder="Drama, Acción..." />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] text-muted-foreground">Género</label>
+                                  <Input value={ytSVideoForms[vid.videoId]?.genre || ''} onChange={e => setYtSVideoForms(f => ({ ...f, [vid.videoId]: { ...f[vid.videoId], genre: e.target.value } }))} className="bg-background h-8 text-xs" placeholder="Drama" />
+                                </div>
+                              </div>
+                              <div className="flex gap-2 pt-1">
+                                <Button
+                                  size="sm"
+                                  className="h-8 text-xs"
+                                  disabled={ytSImporting.has(vid.videoId)}
+                                  onClick={() => ytSImportVideo(vid.videoId, ytSVideoForms[vid.videoId] || { title: vid.title, category: '', genre: '' }, vid.thumbnail)}
+                                >
+                                  {ytSImporting.has(vid.videoId) ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+                                  Importar como serie
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setYtSExpandedVideo(null)}>Cancelar</Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {playlists.length === 0 && videos.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Youtube className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                      <p className="text-sm">No se encontraron resultados para "{ytSQuery}"</p>
+                      <p className="text-xs mt-1 opacity-60">Prueba con otro nombre o término de búsqueda</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          <DialogFooter className="px-4 py-3 border-t border-border flex-shrink-0">
+            <Button variant="outline" size="sm" onClick={() => setShowYtSeriesSearch(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editSeries} onOpenChange={(o) => !o && setEditSeries(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-card border-border">

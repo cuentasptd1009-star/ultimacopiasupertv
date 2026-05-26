@@ -410,4 +410,174 @@ router.post("/youtube/import-playlist", requireAdminAuth, async (req: Request, r
   }
 });
 
+// ── YouTube Series Search (playlists + full-series videos) ───────────────────
+
+function buildSeriesVideoQuery(raw: string): string {
+  let q = raw.trim();
+  for (const [es, en] of Object.entries(GENRE_MAP)) {
+    if (!es.includes(" ")) {
+      q = q.replace(new RegExp(`\\b${es}\\b`, "gi"), en);
+    }
+  }
+  const SERIES_FILLER = /\b(series?|serie|temporada|temporadas|episodios?|cap[ií]tulos?|ver|buscar|quiero|hay|buenas?|mejores?)\b/gi;
+  q = q.replace(SERIES_FILLER, " ").replace(/\s{2,}/g, " ").trim();
+  if (!q || q.length < 2) q = raw.trim();
+  // Bias toward full-series videos
+  if (!q.toLowerCase().includes("temporada") && !q.toLowerCase().includes("season")) {
+    q = `${q} serie completa temporadas`;
+  }
+  return q;
+}
+
+router.get("/youtube/series-search", requireAdminAuth, async (req: Request, res: Response) => {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    return res.status(503).json({ error: "YOUTUBE_API_KEY no configurada", needsKey: true });
+  }
+
+  const q = String(req.query.q || "").trim();
+  if (!q) return res.json({ playlists: [], videos: [] });
+
+  try {
+    // 1. Search playlists
+    const playlistParams = new URLSearchParams({
+      part: "snippet",
+      type: "playlist",
+      q,
+      maxResults: "12",
+      key: apiKey,
+    });
+    const [playlistRes, videoRes] = await Promise.all([
+      fetch(`${YT_API}/search?${playlistParams}`, { signal: AbortSignal.timeout(15000) }),
+      fetch(`${YT_API}/search?${new URLSearchParams({
+        part: "snippet",
+        type: "video",
+        q: buildSeriesVideoQuery(q),
+        videoDuration: "long",
+        maxResults: "10",
+        key: apiKey,
+      })}`, { signal: AbortSignal.timeout(15000) }),
+    ]);
+
+    const playlistData = playlistRes.ok ? await playlistRes.json() as any : { items: [] };
+    const videoData = videoRes.ok ? await videoRes.json() as any : { items: [] };
+
+    const playlistItems: any[] = playlistData.items || [];
+    const videoItems: any[] = videoData.items || [];
+
+    // 2. Fetch playlist details (item count)
+    let playlistDetails: Record<string, { itemCount: number }> = {};
+    const playlistIds = playlistItems.map((i: any) => i.id?.playlistId).filter(Boolean).join(",");
+    if (playlistIds) {
+      const detailRes = await fetch(`${YT_API}/playlists?${new URLSearchParams({ part: "contentDetails", id: playlistIds, key: apiKey })}`, { signal: AbortSignal.timeout(10000) });
+      if (detailRes.ok) {
+        const dd = await detailRes.json() as any;
+        for (const p of dd.items || []) {
+          playlistDetails[p.id] = { itemCount: p.contentDetails?.itemCount ?? 0 };
+        }
+      }
+    }
+
+    // 3. Fetch video durations
+    let durationMap: Record<string, string> = {};
+    const videoIds = videoItems.map((i: any) => i.id?.videoId).filter(Boolean).join(",");
+    if (videoIds) {
+      const dRes = await fetch(`${YT_API}/videos?${new URLSearchParams({ part: "contentDetails", id: videoIds, key: apiKey })}`, { signal: AbortSignal.timeout(10000) });
+      if (dRes.ok) {
+        const dd = await dRes.json() as any;
+        for (const v of dd.items || []) {
+          durationMap[v.id] = parseISODuration(v.contentDetails?.duration || "");
+        }
+      }
+    }
+
+    const playlists = playlistItems
+      .map((item: any) => {
+        const playlistId: string = item.id?.playlistId || "";
+        if (!playlistId) return null;
+        const sn = item.snippet || {};
+        return {
+          playlistId,
+          title: sanitizeText(sn.title || "", 300),
+          description: sanitizeText(sn.description || "", 300),
+          thumbnail: sn.thumbnails?.medium?.url || sn.thumbnails?.default?.url || `https://img.youtube.com/vi/default/mqdefault.jpg`,
+          channel: sanitizeText(sn.channelTitle || "", 100),
+          episodeCount: playlistDetails[playlistId]?.itemCount ?? 0,
+          url: `https://www.youtube.com/playlist?list=${playlistId}`,
+        };
+      })
+      .filter(Boolean);
+
+    const videos = videoItems
+      .map((item: any) => {
+        const videoId: string = item.id?.videoId || "";
+        if (!videoId) return null;
+        const sn = item.snippet || {};
+        return {
+          videoId,
+          title: sanitizeText(sn.title || "", 300),
+          description: sanitizeText(sn.description || "", 300),
+          thumbnail: sn.thumbnails?.medium?.url || sn.thumbnails?.default?.url || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+          channel: sanitizeText(sn.channelTitle || "", 100),
+          duration: durationMap[videoId] || "",
+          url: `https://www.youtube.com/watch?v=${videoId}`,
+        };
+      })
+      .filter(Boolean);
+
+    res.json({ playlists, videos });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Import single YouTube video as a series (1 season, 1 episode) ─────────────
+router.post("/youtube/import-video-as-series", requireAdminAuth, async (req: Request, res: Response) => {
+  try {
+    const { videoId, title, description, poster, category, genre, year } = req.body;
+    if (!videoId) return res.status(400).json({ error: "videoId requerido" });
+    if (!title) return res.status(400).json({ error: "title requerido" });
+
+    const cleanTitle = sanitizeText(String(title), 500);
+    const cleanDesc = description ? sanitizeText(String(description), 1000) : null;
+    const cleanYear = year ? parseInt(String(year)) || null : null;
+    const cleanCategory = category ? String(category).slice(0, 200) : null;
+    const cleanGenre = genre ? String(genre).slice(0, 100) : null;
+    const thumb = poster || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    const filePath = `https://www.youtube.com/watch?v=${videoId}`;
+
+    const [series] = await db.insert(seriesTable).values({
+      title: cleanTitle,
+      description: cleanDesc,
+      poster: thumb,
+      category: cleanCategory,
+      genre: cleanGenre,
+      year: cleanYear,
+    }).returning();
+
+    const [season] = await db.insert(seasonsTable).values({
+      seriesId: series.id,
+      seasonNumber: 1,
+      title: "Temporada 1",
+    }).returning();
+
+    await db.insert(episodesTable).values({
+      seriesId: series.id,
+      seasonId: season.id,
+      episodeNumber: 1,
+      title: cleanTitle,
+      filePath,
+      videoFormat: "youtube",
+      thumbnail: thumb,
+      order: 0,
+    });
+
+    cache.invalidatePrefix("series:");
+    res.json({ series, seasonId: season.id, episodesCreated: 1 });
+  } catch (e: any) {
+    const detail = (e?.cause as any)?.message ?? e?.cause ?? e.message;
+    res.status(500).json({ error: String(detail) });
+  }
+});
+
 export default router;
