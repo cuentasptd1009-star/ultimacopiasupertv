@@ -547,16 +547,16 @@ export const ContentCard = memo(function ContentCard({
         </div>
 
         {!portrait && (
-          <div className="mt-1.5 px-0.5">
+          <div className="mt-2 px-0.5 space-y-0.5">
             <p
-              className={`text-xs font-medium truncate leading-snug transition-colors duration-200 ${
-                isFocused ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
+              className={`text-[11px] font-semibold leading-[1.35] line-clamp-2 transition-colors duration-200 ${
+                isFocused ? 'text-white' : 'text-white/75 group-hover:text-white'
               }`}
             >
               {title}
             </p>
             {subtitle && (
-              <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">{subtitle}</p>
+              <p className="text-[9.5px] font-medium text-white/30 truncate tracking-wide uppercase">{subtitle}</p>
             )}
           </div>
         )}
