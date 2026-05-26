@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Check, UserCircle2, Save, Loader2 } from 'lucide-react';
-import { useTvKeyboard } from '@/hooks/use-tv-keyboard';
 
 interface Avatar {
   id: number;
@@ -33,14 +32,38 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
   const [zone, setZone] = useState<ProfileZone>('name');
   const [avatarIndex, setAvatarIndex] = useState(0);
   const [actionIndex, setActionIndex] = useState(1);
+  const [inputFocused, setInputFocused] = useState(false);
+
   const nameRef = useRef<HTMLInputElement>(null);
-  const { openKeyboard } = useTvKeyboard();
+  const avatarButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const allAvatars = [null, ...avatars];
 
   useEffect(() => {
     const idx = allAvatars.findIndex(av => (av?.id ?? null) === selectedAvatarId);
     if (idx >= 0) setAvatarIndex(idx);
+  }, []);
+
+  // Scroll focused avatar button into view whenever selection changes
+  useEffect(() => {
+    if (zone === 'avatars') {
+      avatarButtonRefs.current[avatarIndex]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [avatarIndex, zone]);
+
+  const focusNameInput = useCallback(() => {
+    const input = nameRef.current;
+    if (!input) return;
+    // Focus the real DOM input — browser will raise its native keyboard on TV/mobile
+    input.focus();
+    const len = input.value.length;
+    try { input.setSelectionRange(len, len); } catch {}
+    setInputFocused(true);
+  }, []);
+
+  const blurNameInput = useCallback(() => {
+    nameRef.current?.blur();
+    setInputFocused(false);
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -58,21 +81,21 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
+      // While input is focused: only Escape exits text-editing mode; everything else goes to the input
+      if (inputFocused) {
+        if (e.key === 'Escape') { e.preventDefault(); blurNameInput(); }
         return;
       }
+
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
 
       if (zone === 'name') {
         switch (e.key) {
           case 'Enter':
+          case 'OK':
             e.preventDefault();
-            openKeyboard(nameRef.current, {
-              value: name,
-              onChange: (v) => setName(v),
-              label: 'Nombre para mostrar',
-            });
+            // Focuses the real <input> → browser shows its native keyboard on TV browsers
+            focusNameInput();
             break;
           case 'ArrowDown':
             e.preventDefault();
@@ -83,20 +106,29 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
             setZone('actions');
             break;
         }
+
       } else if (zone === 'avatars') {
+        const row = Math.floor(avatarIndex / COLS);
+        const col = avatarIndex % COLS;
+        const totalRows = Math.ceil(allAvatars.length / COLS);
+
         switch (e.key) {
           case 'ArrowRight':
             e.preventDefault();
-            setAvatarIndex(p => Math.min(p + 1, allAvatars.length - 1));
+            // Stay within current row — don't wrap to next row
+            if (col < COLS - 1 && avatarIndex + 1 < allAvatars.length) {
+              setAvatarIndex(p => p + 1);
+            }
             break;
           case 'ArrowLeft':
             e.preventDefault();
-            setAvatarIndex(p => Math.max(p - 1, 0));
+            if (col > 0) setAvatarIndex(p => p - 1);
             break;
           case 'ArrowDown':
             e.preventDefault();
-            if (avatarIndex + COLS < allAvatars.length) {
-              setAvatarIndex(p => p + COLS);
+            if (row < totalRows - 1) {
+              const next = avatarIndex + COLS;
+              setAvatarIndex(next < allAvatars.length ? next : allAvatars.length - 1);
             } else {
               setZone('actions');
               setActionIndex(1);
@@ -104,19 +136,18 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
             break;
           case 'ArrowUp':
             e.preventDefault();
-            if (avatarIndex - COLS >= 0) {
-              setAvatarIndex(p => p - COLS);
-            } else {
-              setZone('name');
-            }
+            if (row > 0) setAvatarIndex(p => p - COLS);
+            else setZone('name');
             break;
-          case 'Enter': {
+          case 'Enter':
+          case 'OK': {
             e.preventDefault();
             const av = allAvatars[avatarIndex];
             setSelectedAvatarId(av?.id ?? null);
             break;
           }
         }
+
       } else if (zone === 'actions') {
         switch (e.key) {
           case 'ArrowLeft':
@@ -136,9 +167,9 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
             setZone('name');
             break;
           case 'Enter':
+          case 'OK':
             e.preventDefault();
-            if (actionIndex === 0) onClose();
-            else handleSave();
+            if (actionIndex === 0) onClose(); else handleSave();
             break;
           case 'Backspace':
             e.preventDefault();
@@ -150,7 +181,7 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [zone, avatarIndex, actionIndex, name, onClose, allAvatars, handleSave, openKeyboard]);
+  }, [zone, avatarIndex, actionIndex, name, onClose, allAvatars, handleSave, focusNameInput, blurNameInput, inputFocused]);
 
   return (
     <div
@@ -161,9 +192,11 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
         className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full space-y-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">Mi Perfil</h2>
           <button
+            tabIndex={-1}
             onClick={onClose}
             className="p-1.5 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
           >
@@ -171,35 +204,45 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
           </button>
         </div>
 
+        {/* Name field */}
         <div>
           <label className="text-xs text-muted-foreground mb-1.5 block font-medium">
             Nombre para mostrar
           </label>
           <div
-            className={`relative rounded-md transition-all ${zone === 'name' ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}
+            className={`relative rounded-md transition-all ${
+              inputFocused
+                ? 'ring-2 ring-primary/70 ring-offset-1 ring-offset-background'
+                : zone === 'name'
+                  ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                  : ''
+            }`}
           >
             <input
               ref={nameRef}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={session?.codeName ?? 'Tu nombre'}
-              readOnly
-              onClick={() => {
-                setZone('name');
-                openKeyboard(nameRef.current, {
-                  value: name,
-                  onChange: (v) => setName(v),
-                  label: 'Nombre para mostrar',
-                });
+              onFocus={() => { setZone('name'); setInputFocused(true); }}
+              onBlur={() => setInputFocused(false)}
+              onClick={() => { setZone('name'); focusNameInput(); }}
+              onKeyDown={(e) => {
+                // While typing: Enter or Escape confirms and exits text mode; ArrowDown moves to avatars
+                if (e.key === 'Escape') { e.preventDefault(); blurNameInput(); }
+                else if (e.key === 'Enter') { e.preventDefault(); blurNameInput(); }
+                else if (e.key === 'ArrowDown') { e.preventDefault(); blurNameInput(); setZone('avatars'); }
               }}
-              className="w-full px-3 py-2 rounded-md bg-background border border-border text-sm cursor-pointer focus:outline-none"
+              className="w-full px-3 py-2 rounded-md bg-background border border-border text-sm focus:outline-none caret-primary"
             />
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">
-              {zone === 'name' ? '↵ Editar' : ''}
-            </span>
+            {zone === 'name' && !inputFocused && (
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none select-none">
+                ↵ Editar
+              </span>
+            )}
           </div>
         </div>
 
+        {/* Avatar grid */}
         <div>
           <label className="text-xs text-muted-foreground mb-2 block font-medium">
             Foto de perfil
@@ -207,22 +250,32 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
           {avatars.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">No hay avatares disponibles aún.</p>
           ) : (
-            <div className="grid grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1 p-2 rounded-xl bg-muted/10 border border-border/40">
+            <div
+              className={`grid grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1 p-2 rounded-xl bg-muted/10 border transition-colors ${
+                zone === 'avatars' ? 'border-primary/50' : 'border-border/40'
+              }`}
+            >
               {allAvatars.map((av, idx) => {
                 const isSelected = selectedAvatarId === (av?.id ?? null);
                 const isFocused = zone === 'avatars' && avatarIndex === idx;
                 return (
                   <button
                     key={av?.id ?? 'default'}
+                    ref={el => { avatarButtonRefs.current[idx] = el; }}
                     type="button"
-                    onClick={() => { setZone('avatars'); setAvatarIndex(idx); setSelectedAvatarId(av?.id ?? null); }}
+                    tabIndex={-1}
+                    onClick={() => {
+                      setZone('avatars');
+                      setAvatarIndex(idx);
+                      setSelectedAvatarId(av?.id ?? null);
+                    }}
                     title={av?.name ?? 'Sin avatar'}
-                    className={`aspect-square rounded-full flex items-center justify-center border-2 transition-all duration-200 relative overflow-hidden hover:scale-105 focus:outline-none ${
+                    className={`aspect-square rounded-full flex items-center justify-center border-2 transition-all duration-150 relative overflow-hidden focus:outline-none ${
                       isFocused
-                        ? 'ring-4 ring-primary ring-offset-1 ring-offset-background scale-110 border-primary'
+                        ? 'ring-4 ring-primary ring-offset-1 ring-offset-background scale-110 border-primary shadow-lg shadow-primary/40'
                         : isSelected
                           ? 'border-primary ring-2 ring-primary/40 scale-105'
-                          : 'border-border hover:border-primary/50'
+                          : 'border-border hover:border-primary/50 hover:scale-105'
                     }`}
                   >
                     {av ? (
@@ -255,17 +308,17 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
           )}
         </div>
 
-        {error && (
-          <p className="text-xs text-destructive text-center">{error}</p>
-        )}
+        {error && <p className="text-xs text-destructive text-center">{error}</p>}
 
+        {/* Action buttons */}
         <div className="flex gap-2 pt-1">
           <button
             type="button"
+            tabIndex={-1}
             onClick={onClose}
             className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${
               zone === 'actions' && actionIndex === 0
-                ? 'border-primary ring-2 ring-primary text-foreground bg-muted'
+                ? 'border-primary ring-2 ring-primary text-foreground bg-muted scale-105'
                 : 'border-border text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -273,11 +326,12 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
           </button>
           <button
             type="button"
+            tabIndex={-1}
             onClick={handleSave}
             disabled={saving}
             className={`flex-1 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-all disabled:opacity-60 flex items-center justify-center gap-2 ${
               zone === 'actions' && actionIndex === 1
-                ? 'ring-4 ring-white scale-105'
+                ? 'ring-4 ring-white scale-105 shadow-lg'
                 : ''
             }`}
           >
@@ -289,8 +343,11 @@ export function ProfileEditor({ session, avatars, onClose, onSave }: ProfileEdit
           </button>
         </div>
 
-        <p className="text-center text-[10px] text-muted-foreground/50">
-          ▲▼◄► Navegar · Enter Seleccionar · Esc Cerrar
+        {/* Hint line — adapts to current mode */}
+        <p className="text-center text-[10px] text-muted-foreground/50 leading-relaxed">
+          {inputFocused
+            ? 'Escribí tu nombre · Enter o Esc para confirmar'
+            : '▲▼◄► Navegar · Enter Seleccionar · Esc Cerrar'}
         </p>
       </div>
     </div>
