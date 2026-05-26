@@ -8,7 +8,7 @@ import { setToken, getToken } from '@/lib/auth';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 import { useTvKeyboard } from '@/hooks/use-tv-keyboard';
 import { Download, Share2, Smartphone, QrCode, X, Tv, CheckCircle, Loader2, Eye, EyeOff, Bookmark, BookmarkCheck } from 'lucide-react';
-import logo from '@assets/imagen_1777670460131.png';
+import logo from '@assets/logo_supertv.png';
 
 type FocusZone = 'input' | 'remember' | 'submit' | 'qr' | 'install' | 'shortcut';
 
