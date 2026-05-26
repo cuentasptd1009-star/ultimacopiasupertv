@@ -49,6 +49,7 @@ import { Play, Pause, LogOut, Search, Tv, Film, Tv2, X, Download, Share2, UserCi
 import { getFavorites, getAllProgress, getHistory, toggleFavorite, getAllSeriesProgress, getExternalFavorites, getExternalHistory, toggleExternalFavorite, addExternalHistory, isExternalFavorite, removeExternalHistory, clearExternalHistory, type ExternalItem, getSearchHistory, addSearchHistory, removeSearchHistory, clearSearchHistory, getSeriesFavorites, toggleSeriesFavorite, getExternalProgress, getChannelFavorites, toggleChannelFavorite } from '@/lib/user-data';
 import { useVoiceSearch } from '@/hooks/use-voice-search';
 import logo from '@assets/imagen_1777670460131.png';
+import lettersLogo from '@assets/super-tv-letters-logo.png';
 import channelDefaultLogo from '@assets/image_1778868245666.png';
 import { usePwaInstall } from '@/hooks/use-pwa-install';
 import { ContentRow, isChannel } from '@/components/ContentRow';
@@ -1246,7 +1247,7 @@ export default function Home() {
 
         {/* Logo */}
         <div className="p-5 pb-4 flex items-center justify-between">
-          <img src={logo} alt="Super TV" className="h-9 w-auto" />
+          <img src={lettersLogo} alt="Super TV" className="h-10 w-auto object-contain" style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.08))' }} />
           <button className="p-1.5 rounded-lg hover:bg-white/10 text-white/50" onClick={() => { setSidebarMouseOpen(false); setZone('rows'); }}>
             <X className="w-4 h-4" />
           </button>
