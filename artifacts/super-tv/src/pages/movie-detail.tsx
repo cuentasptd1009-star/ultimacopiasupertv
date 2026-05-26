@@ -7,7 +7,7 @@ import { getProgress, toggleFavorite, getFavorites, toggleExternalFavorite, isEx
 import { clearTokens, getToken } from '@/lib/auth';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import logo from '@assets/imagen_1777670460131.png';
-import { ContentCard } from '@/components/ContentCard';
+import { ContentCard, extractYouTubeId } from '@/components/ContentCard';
 import { YouTubePlayerPage } from '@/components/YouTubePlayerPage';
 import { useTvKeyboard } from '@/hooks/use-tv-keyboard';
 
@@ -55,17 +55,15 @@ function MovieGridCard({
   onClick: () => void;
 }) {
   const [previewActive, setPreviewActive] = useState(false);
-  const [previewMuted, setPreviewMuted] = useState(true);
+  const [muted, setMuted] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const canPreview = !!(
-    mv.filePath &&
-    !mv.filePath.includes('youtube.com') &&
-    !mv.filePath.includes('youtu.be')
-  );
+  const ytId = mv.filePath ? extractYouTubeId(mv.filePath) : null;
+  const isDirectVideo = !!(mv.filePath && !ytId);
+  const canPreview = !!(ytId || isDirectVideo);
 
   const startTimer = () => {
-    if (!canPreview) return;
+    if (!mv.filePath) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => setPreviewActive(true), 1500);
   };
@@ -73,7 +71,7 @@ function MovieGridCard({
   const stopPreview = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     setPreviewActive(false);
-    setPreviewMuted(true);
+    setMuted(true);
   };
 
   useEffect(() => {
@@ -82,6 +80,10 @@ function MovieGridCard({
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFocused]);
+
+  const ytSrc = ytId
+    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`
+    : null;
 
   return (
     <div
@@ -103,24 +105,36 @@ function MovieGridCard({
           <Film className="w-8 h-8 text-white/15" />
         )}
 
-        {/* Preview video overlay */}
-        {previewActive && canPreview && mv.filePath && (
-          <div className="absolute inset-0 z-10 animate-[fadeIn_0.3s_ease-in]">
-            <video
-              src={mv.filePath}
-              muted={previewMuted}
-              autoPlay
-              loop
-              playsInline
-              className="w-full h-full object-cover"
-              onError={() => setPreviewActive(false)}
-            />
+        {/* Netflix-style preview overlay */}
+        {previewActive && canPreview && (
+          <div className="absolute inset-0 z-10 bg-black animate-[fadeIn_0.4s_ease-in]">
+            {ytSrc ? (
+              <iframe
+                key={ytSrc}
+                src={ytSrc}
+                className="w-full h-full"
+                allow="autoplay; encrypted-media"
+                allowFullScreen={false}
+                frameBorder="0"
+                title={mv.title}
+              />
+            ) : (
+              <video
+                src={mv.filePath!}
+                muted={muted}
+                autoPlay
+                loop
+                playsInline
+                className="w-full h-full object-cover"
+                onError={() => setPreviewActive(false)}
+              />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
             <button
               className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/70 border border-white/20 z-20 hover:bg-black/90 transition-colors"
-              onClick={(e) => { e.stopPropagation(); setPreviewMuted(m => !m); }}
+              onClick={(e) => { e.stopPropagation(); setMuted(m => !m); }}
             >
-              {previewMuted
+              {muted
                 ? <VolumeX className="w-3 h-3 text-white" />
                 : <Volume2 className="w-3 h-3 text-white" />
               }

@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef } from 'react';
-import { Play, Heart, Film, Volume2, VolumeX } from 'lucide-react';
+import { Play, Heart, Film, VolumeX, Volume2 } from 'lucide-react';
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
 
@@ -25,6 +25,11 @@ function titleGradient(title: string): string {
 function fmtSecs(s: number): string {
   const m = Math.floor(s / 60), sec = Math.floor(s % 60);
   return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+export function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
 }
 
 interface WatchProgress {
@@ -71,19 +76,17 @@ export const ContentCard = memo(function ContentCard({
 }: ContentCardProps) {
   const [imgError, setImgError] = useState(false);
   const [previewActive, setPreviewActive] = useState(false);
-  const [previewMuted, setPreviewMuted] = useState(true);
+  const [muted, setMuted] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const canPreviewRef = useRef(false);
+  const previewUrlRef = useRef(previewUrl);
+  previewUrlRef.current = previewUrl;
 
-  // Only preview direct video files — not YouTube
-  canPreviewRef.current = !!(
-    previewUrl &&
-    !previewUrl.includes('youtube.com') &&
-    !previewUrl.includes('youtu.be')
-  );
+  const ytId = previewUrl ? extractYouTubeId(previewUrl) : null;
+  const isDirectVideo = !!(previewUrl && !ytId);
+  const canPreview = !!(ytId || isDirectVideo);
 
   const startTimer = () => {
-    if (!canPreviewRef.current) return;
+    if (!previewUrlRef.current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => setPreviewActive(true), 1500);
   };
@@ -91,16 +94,13 @@ export const ContentCard = memo(function ContentCard({
   const stopPreview = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     setPreviewActive(false);
-    setPreviewMuted(true);
+    setMuted(true);
   };
 
-  // TV remote: react to isFocused prop
+  // React to TV remote focus
   useEffect(() => {
-    if (isFocused) {
-      startTimer();
-    } else {
-      stopPreview();
-    }
+    if (isFocused) startTimer();
+    else stopPreview();
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFocused]);
@@ -108,12 +108,14 @@ export const ContentCard = memo(function ContentCard({
   const handleMouseEnter = () => { startTimer(); onHover?.(); };
   const handleMouseLeave = () => { stopPreview(); onHoverEnd?.(); };
 
-  const widthClass = portrait
-    ? 'w-28 sm:w-32 md:w-36'
-    : 'w-40 sm:w-44 md:w-48';
-
+  const widthClass = portrait ? 'w-28 sm:w-32 md:w-36' : 'w-40 sm:w-44 md:w-48';
   const grad = titleGradient(title);
   const showFallback = !image || imgError;
+
+  // YouTube embed src — mute param toggled via state
+  const ytSrc = ytId
+    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`
+    : null;
 
   return (
     <div
@@ -133,7 +135,7 @@ export const ContentCard = memo(function ContentCard({
             : 'group-hover:shadow-[0_8px_40px_rgba(0,0,0,0.9)] group-hover:ring-1 group-hover:ring-white/20'
         }`}
       >
-        {/* Image layer */}
+        {/* Poster / fallback image */}
         {image && !imgError ? (
           <img
             src={image}
@@ -162,36 +164,57 @@ export const ContentCard = memo(function ContentCard({
           </div>
         )}
 
-        {/* Netflix-style video preview overlay */}
-        {previewActive && canPreviewRef.current && previewUrl && (
-          <div className="absolute inset-0 z-10 animate-[fadeIn_0.3s_ease-in]">
-            <video
-              src={previewUrl}
-              muted={previewMuted}
-              autoPlay
-              loop
-              playsInline
-              className="w-full h-full object-cover"
-              onError={() => setPreviewActive(false)}
-            />
+        {/* ── Netflix-style preview overlay ── */}
+        {previewActive && canPreview && (
+          <div className="absolute inset-0 z-10 bg-black animate-[fadeIn_0.4s_ease-in]">
+            {ytSrc ? (
+              /* YouTube iframe preview */
+              <iframe
+                key={ytSrc}
+                src={ytSrc}
+                className="w-full h-full"
+                allow="autoplay; encrypted-media"
+                allowFullScreen={false}
+                frameBorder="0"
+                title={title}
+              />
+            ) : (
+              /* Direct video preview */
+              <video
+                src={previewUrl!}
+                muted={muted}
+                autoPlay
+                loop
+                playsInline
+                className="w-full h-full object-cover"
+                onError={() => setPreviewActive(false)}
+              />
+            )}
+
+            {/* Bottom gradient + title */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute bottom-2 left-2 right-8 pointer-events-none">
+              <p className="text-white text-[11px] font-semibold leading-tight line-clamp-2 drop-shadow-lg">{title}</p>
+            </div>
+
+            {/* Mute/unmute button */}
             <button
               className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/70 border border-white/20 z-20 hover:bg-black/90 transition-colors"
-              onClick={(e) => { e.stopPropagation(); setPreviewMuted(m => !m); }}
-              title={previewMuted ? 'Activar sonido' : 'Silenciar'}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMuted(m => !m);
+              }}
+              title={muted ? 'Activar sonido' : 'Silenciar'}
             >
-              {previewMuted
+              {muted
                 ? <VolumeX className="w-3 h-3 text-white" />
                 : <Volume2 className="w-3 h-3 text-white" />
               }
             </button>
-            <div className="absolute bottom-2 left-2 right-8 pointer-events-none">
-              <p className="text-white text-[11px] font-semibold leading-tight line-clamp-2 drop-shadow-lg">{title}</p>
-            </div>
           </div>
         )}
 
-        {/* Overlays (hidden when preview is active) */}
+        {/* Standard overlays — hidden while preview plays */}
         {!previewActive && (portrait ? (
           <>
             {!showFallback && (
@@ -208,12 +231,8 @@ export const ContentCard = memo(function ContentCard({
             </div>
             {!showFallback && (
               <div className="absolute bottom-0 left-0 right-0 p-2 pb-2.5">
-                <p className="text-white text-[11px] font-semibold leading-tight line-clamp-2 drop-shadow-lg">
-                  {title}
-                </p>
-                {subtitle && (
-                  <p className="text-white/50 text-[9px] truncate mt-0.5">{subtitle}</p>
-                )}
+                <p className="text-white text-[11px] font-semibold leading-tight line-clamp-2 drop-shadow-lg">{title}</p>
+                {subtitle && <p className="text-white/50 text-[9px] truncate mt-0.5">{subtitle}</p>}
               </div>
             )}
           </>
@@ -234,9 +253,7 @@ export const ContentCard = memo(function ContentCard({
               </div>
             </div>
             <div className="absolute bottom-2 left-2 right-8">
-              <p className="text-white text-[11px] font-semibold leading-tight line-clamp-2 drop-shadow-lg">
-                {title}
-              </p>
+              <p className="text-white text-[11px] font-semibold leading-tight line-clamp-2 drop-shadow-lg">{title}</p>
             </div>
           </div>
         ))}
