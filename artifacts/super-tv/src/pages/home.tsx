@@ -434,7 +434,6 @@ export default function Home() {
     const id = setInterval(() => setSearchHintIdx(i => (i + 1) % SEARCH_HINTS.length), 2500);
     return () => clearInterval(id);
   }, []);
-  const searchPlaceholder = isListening ? 'Escuchando...' : `Buscar... ${SEARCH_HINTS[searchHintIdx]}`;
   const [zone, setZone] = useState<NavZone>('rows');
   const [inputMode, setInputMode] = useState<'mouse' | 'keyboard'>('mouse');
   const inputModeRef = useRef<'mouse' | 'keyboard'>('mouse');
@@ -492,6 +491,7 @@ export default function Home() {
     onResult: (transcript) => { setSearchQuery(transcript); setSearchInput(transcript); setRowIndex(0); setColIndex(0); setVoiceError(null); searchRef.current?.focus(); },
     onError: (err) => { setVoiceError(err === 'not-allowed' ? 'Permiso de micrófono denegado' : 'No se pudo reconocer la voz'); setTimeout(() => setVoiceError(null), 3000); },
   });
+  const searchPlaceholder = isListening ? 'Escuchando...' : `Buscar... ${SEARCH_HINTS[searchHintIdx]}`;
 
   const [favorites, setFavorites] = useState<number[]>(() => getFavorites());
   const [detailMovie, setDetailMovie] = useState<MovieInfo | null>(null);
