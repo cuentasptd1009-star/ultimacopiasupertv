@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef } from 'react';
-import { Play, Heart, Film, VolumeX, Volume2 } from 'lucide-react';
+import { Play, Heart, Film } from 'lucide-react';
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, '') || '';
 
@@ -76,7 +76,6 @@ export const ContentCard = memo(function ContentCard({
 }: ContentCardProps) {
   const [imgError, setImgError] = useState(false);
   const [previewActive, setPreviewActive] = useState(false);
-  const [muted, setMuted] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewUrlRef = useRef(previewUrl);
   previewUrlRef.current = previewUrl;
@@ -94,7 +93,6 @@ export const ContentCard = memo(function ContentCard({
   const stopPreview = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     setPreviewActive(false);
-    setMuted(true);
   };
 
   // React to TV remote focus
@@ -112,9 +110,8 @@ export const ContentCard = memo(function ContentCard({
   const grad = titleGradient(title);
   const showFallback = !image || imgError;
 
-  // YouTube embed src — mute param toggled via state
   const ytSrc = ytId
-    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`
+    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`
     : null;
 
   return (
@@ -192,26 +189,8 @@ export const ContentCard = memo(function ContentCard({
               />
             )}
 
-            {/* Bottom gradient + title */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-            <div className="absolute bottom-2 left-2 right-8 pointer-events-none">
-              <p className="text-white text-[11px] font-semibold leading-tight line-clamp-2 drop-shadow-lg">{title}</p>
-            </div>
-
-            {/* Mute/unmute button */}
-            <button
-              className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/70 border border-white/20 z-20 hover:bg-black/90 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMuted(m => !m);
-              }}
-              title={muted ? 'Activar sonido' : 'Silenciar'}
-            >
-              {muted
-                ? <VolumeX className="w-3 h-3 text-white" />
-                : <Volume2 className="w-3 h-3 text-white" />
-              }
-            </button>
+            {/* Bottom gradient */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
           </div>
         )}
 

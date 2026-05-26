@@ -2,7 +2,7 @@ import { useLocation, useRoute } from 'wouter';
 import { normalizeKey } from '@/lib/tv-remote';
 import { useListMovies, getListMoviesQueryKey, useGetMe, getGetMeQueryKey } from '@workspace/api-client-react';
 import { apiBase } from '@/lib/api';
-import { Play, ArrowLeft, Film, Tag, Search, X, Lock, Heart, Info, Volume2, VolumeX } from 'lucide-react';
+import { Play, ArrowLeft, Film, Tag, Search, X, Lock, Heart, Info } from 'lucide-react';
 import { getProgress, toggleFavorite, getFavorites, toggleExternalFavorite, isExternalFavorite, addExternalHistory, type ExternalItem } from '@/lib/user-data';
 import { clearTokens, getToken } from '@/lib/auth';
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
@@ -55,7 +55,6 @@ function MovieGridCard({
   onClick: () => void;
 }) {
   const [previewActive, setPreviewActive] = useState(false);
-  const [muted, setMuted] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ytId = mv.filePath ? extractYouTubeId(mv.filePath) : null;
@@ -71,7 +70,6 @@ function MovieGridCard({
   const stopPreview = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     setPreviewActive(false);
-    setMuted(true);
   };
 
   useEffect(() => {
@@ -82,7 +80,7 @@ function MovieGridCard({
   }, [isFocused]);
 
   const ytSrc = ytId
-    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`
+    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&controls=0&loop=1&playlist=${ytId}&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1`
     : null;
 
   return (
@@ -130,16 +128,7 @@ function MovieGridCard({
                 onError={() => setPreviewActive(false)}
               />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-            <button
-              className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/70 border border-white/20 z-20 hover:bg-black/90 transition-colors"
-              onClick={(e) => { e.stopPropagation(); setMuted(m => !m); }}
-            >
-              {muted
-                ? <VolumeX className="w-3 h-3 text-white" />
-                : <Volume2 className="w-3 h-3 text-white" />
-              }
-            </button>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
           </div>
         )}
 
