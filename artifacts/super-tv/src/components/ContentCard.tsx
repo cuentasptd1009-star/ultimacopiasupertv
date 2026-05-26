@@ -209,6 +209,24 @@ export const ContentCard = memo(function ContentCard({
     onHoverEnd?.();
   };
 
+  const handleTouchStart = () => {
+    if (disableHover) return;
+    isHoveringRef.current = true;
+    startTimer();
+  };
+
+  const handleTouchEnd = () => {
+    isHoveringRef.current = false;
+    if (!previewActive) {
+      stopPreview();
+    }
+  };
+
+  const handleTouchCancel = () => {
+    isHoveringRef.current = false;
+    stopPreview();
+  };
+
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
     const next = !muted;
@@ -335,7 +353,7 @@ export const ContentCard = memo(function ContentCard({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
               {/* Play */}
               <button
-                onClick={(e) => { e.stopPropagation(); onClick(); }}
+                onClick={(e) => { e.stopPropagation(); stopPreview(); onClick(); }}
                 title="Reproducir"
                 style={{
                   width: 36, height: 36, borderRadius: '50%',
@@ -420,9 +438,12 @@ export const ContentCard = memo(function ContentCard({
         className={`flex-shrink-0 ${widthClass} group cursor-pointer select-none transition-transform duration-200 ease-out ${
           isFocused ? 'scale-105 z-20' : 'hover:scale-[1.04] z-10'
         }`}
-        onClick={onClick}
+        onClick={() => { stopPreview(); onClick(); }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
       >
         <div
           className={`${portrait ? 'aspect-[2/3]' : 'aspect-video'} rounded-lg overflow-hidden relative shadow-md transition-[box-shadow,ring] duration-200 ${

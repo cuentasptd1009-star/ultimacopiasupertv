@@ -100,6 +100,10 @@ function MovieGridCard({
   };
   const handlePortalLeave = () => { isHoveringRef.current = false; stopPreview(); };
 
+  const handleTouchStart = () => { isHoveringRef.current = true; startTimer(); };
+  const handleTouchEnd = () => { isHoveringRef.current = false; if (!previewActive) stopPreview(); };
+  const handleTouchCancel = () => { isHoveringRef.current = false; stopPreview(); };
+
   const previewPortal = previewActive && cardRect ? createPortal(
     <div
       className="fixed rounded-xl overflow-hidden cursor-pointer"
@@ -113,7 +117,7 @@ function MovieGridCard({
         animation: 'fadeIn 0.35s ease-out',
       }}
       onMouseLeave={handlePortalLeave}
-      onClick={onClick}
+      onClick={() => { stopPreview(); onClick(); }}
     >
       {ytSrc ? (
         <iframe
@@ -143,7 +147,10 @@ function MovieGridCard({
         ref={(el) => { innerRef.current = el; cardRef?.(el); }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onClick={onClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
+        onClick={() => { stopPreview(); onClick(); }}
         className={`group flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${
           isFocused
             ? 'ring-4 ring-primary scale-105 shadow-[0_0_20px_rgba(220,38,38,0.5)] z-10'
