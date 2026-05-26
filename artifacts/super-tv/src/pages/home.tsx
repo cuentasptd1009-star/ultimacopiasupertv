@@ -427,6 +427,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [zone, setZone] = useState<NavZone>('rows');
+  const [keyboardActive, setKeyboardActive] = useState(false);
 
   type YtResult = { videoId: string; title: string; thumbnail: string; channel: string; year?: string; duration: string };
   type ArchiveResult = { identifier: string; title: string; year?: string; creator?: string; thumbnail: string };
@@ -910,6 +911,7 @@ export default function Home() {
 
       // Blur any focused button/link so arrow keys always reach our handler
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+        setKeyboardActive(true);
         if (activeEl && activeEl !== document.body && (activeEl as HTMLElement).blur) {
           (activeEl as HTMLElement).blur();
         }
@@ -1233,9 +1235,9 @@ export default function Home() {
       </div>
 
       {/* ── FULL SIDEBAR OVERLAY ── */}
-      {showSidebar && <div className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm" onClick={() => { setSidebarMouseOpen(false); setZone('rows'); }} />}
+      {showSidebar && <div className="fixed inset-0 z-[340] bg-black/60 backdrop-blur-sm" onClick={() => { setSidebarMouseOpen(false); setZone('rows'); }} />}
       <aside
-        className={`fixed left-0 top-0 h-full z-[60] bg-background border-r border-white/8 flex flex-col transition-all duration-300 w-72 shadow-2xl
+        className={`fixed left-0 top-0 h-full z-[350] bg-background border-r border-white/8 flex flex-col transition-all duration-300 w-72 shadow-2xl
           ${showSidebar ? 'translate-x-0' : '-translate-x-full'}`}
         onMouseEnter={openSidebarHover}
         onMouseLeave={closeSidebarHover}
@@ -1302,7 +1304,7 @@ export default function Home() {
           {navItems.map((item, i) => {
             const Icon = item.icon;
             const isActive = activeTab === item.key;
-            const isFocused = zone === 'sidebar' && sidebarItems[sidebarIdx]?.kind === 'tab' && (sidebarItems[sidebarIdx] as { kind: 'tab'; tabIdx: number; key: TabKey }).tabIdx === i;
+            const isFocused = keyboardActive && zone === 'sidebar' && sidebarItems[sidebarIdx]?.kind === 'tab' && (sidebarItems[sidebarIdx] as { kind: 'tab'; tabIdx: number; key: TabKey }).tabIdx === i;
             return (
               <button
                 key={item.key}
@@ -1327,7 +1329,7 @@ export default function Home() {
           {actionButtons.filter(b => b.key !== 'profile').map((btn) => {
             const Icon = btn.icon;
             const isLogout = btn.key === 'logout';
-            const isFocused = zone === 'sidebar' && sidebarItems[sidebarIdx]?.kind === 'action' && (sidebarItems[sidebarIdx] as { kind: 'action'; key: string }).key === btn.key;
+            const isFocused = keyboardActive && zone === 'sidebar' && sidebarItems[sidebarIdx]?.kind === 'action' && (sidebarItems[sidebarIdx] as { kind: 'action'; key: string }).key === btn.key;
             return (
               <button key={btn.key} onClick={btn.action} className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isLogout ? 'text-white/35 hover:text-red-400 hover:bg-red-500/10' : 'text-white/45 hover:text-white hover:bg-white/7'} ${isFocused ? (isLogout ? 'ring-2 ring-red-400/60 text-red-400 bg-red-500/10' : 'ring-2 ring-primary/60 text-white bg-white/10') : ''}`}>
                 <Icon className="w-4 h-4 flex-shrink-0" />
@@ -1375,7 +1377,7 @@ export default function Home() {
               overrideItem={hoveredHero}
               onPlay={playHeroBannerItem}
               onInfo={item => item.type === 'series' ? setLocation(`/serie/${item.id}`) : setLocation(`/pelicula/${item.id}`)}
-              focusedBtnIndex={zone === 'hero' ? heroBtnIndex : null}
+              focusedBtnIndex={keyboardActive && zone === 'hero' ? heroBtnIndex : null}
               currentIndex={heroBannerIdx}
               onCurrentChange={setHeroBannerIdx}
             />
@@ -1453,7 +1455,7 @@ export default function Home() {
                       title={ch.name}
                       image={ch.logo ?? null}
                       isChannel
-                      isFocused={zone === 'rows' && rowIndex === 0 && colIndex === cIdx}
+                      isFocused={keyboardActive && zone === 'rows' && rowIndex === 0 && colIndex === cIdx}
                       onClick={() => playItem(ch as ContentItem)}
                     />
                   ))}
@@ -1479,7 +1481,7 @@ export default function Home() {
                           key={s.id}
                           series={s}
                           onClick={() => playSeriesItem(s)}
-                          focused={zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
+                          focused={keyboardActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
                           onHover={() => setHoveredHero({ id: s.id, title: s.title, description: s.description, banner: s.banner, poster: s.poster, category: s.category, genre: s.genre, year: s.year, type: 'series' })}
                           onHoverEnd={() => setHoveredHero(null)}
                         />
@@ -1537,7 +1539,7 @@ export default function Home() {
                     emoji="🎬"
                     items={favoriteMovies as ContentItem[]}
                     focusedIndex={colIndex}
-                    isFocusedRow={zone === 'rows' && rowIndex === 0}
+                    isFocusedRow={keyboardActive && zone === 'rows' && rowIndex === 0}
                     onItemClick={playItem}
                     onFavoriteToggle={doToggleFav}
                     progressMap={progressMap}
@@ -1672,7 +1674,7 @@ export default function Home() {
                             <ContinueWatchingCard
                               key={`${item.type}-${item.id}`}
                               item={item}
-                              focused={zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
+                              focused={keyboardActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx}
                               onClick={() => {
                                 if (isExpired) { setShowExpiredOverlay(true); return; }
                                 if (item.type === 'external' && item.externalItem) {
@@ -1703,7 +1705,7 @@ export default function Home() {
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                           {row.items.map((item, cIdx) => {
                             const ext = item as unknown as { id: number; title: string; poster?: string; _ytDuration?: string };
-                            const isFocused = zone === 'rows' && rowIndex === rIdx && colIndex === cIdx;
+                            const isFocused = keyboardActive && zone === 'rows' && rowIndex === rIdx && colIndex === cIdx;
                             return (
                               <ContentCard
                                 key={item.id}
@@ -1728,7 +1730,7 @@ export default function Home() {
                       emoji={row.emoji}
                       items={row.items}
                       focusedIndex={colIndex}
-                      isFocusedRow={zone === 'rows' && rowIndex === rIdx}
+                      isFocusedRow={keyboardActive && zone === 'rows' && rowIndex === rIdx}
                       onItemClick={playItem}
                       onFavoriteToggle={doToggleFav}
                       progressMap={progressMap}
